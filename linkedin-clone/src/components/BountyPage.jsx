@@ -1,311 +1,286 @@
-import { useState } from 'react'
-import { IconChevronRight, IconBookmark, IconClock, IconCheck, IconX } from '@tabler/icons-react'
-
-const CATEGORIES = ['All', 'Finance', 'Marketing', 'Technology', 'Design', 'Legal', 'Operations']
+import { useState, useEffect } from 'react'
+import { IconCheck, IconArrowLeft, IconStar, IconBrandGithub, IconFileText, IconPhoto, IconSparkles, IconBadge, IconChevronRight } from '@tabler/icons-react'
 
 const BOUNTIES = [
   {
     id: 1,
-    category: 'Technology',
-    title: 'Build an AI-Powered Invoice Parser',
-    company: 'VaultPath',
-    companyInitials: 'VP',
-    companyBg: '#1a1a2e',
-    reward: '$4,500',
-    rewardType: 'Fixed',
-    description: 'Develop a production-ready ML pipeline that extracts structured data from unstructured invoice PDFs with >95% accuracy across diverse formats.',
+    company: 'LinkedIn',
+    companyColor: '#0a66c2',
+    companyTextColor: '#fff',
+    companyLogo: <LinkedInLogo />,
+    category: 'Product / Design',
+    categoryColor: '#0a66c2',
+    title: 'Design a Better Student Profile Section',
+    backlogTag: 'Real backlog item · Deprioritized Q3',
+    description: `LinkedIn's student profiles often feel sparse and don't effectively showcase early-career potential. We've had this on the roadmap for two quarters but it keeps getting bumped.`,
+    ask: `Propose a redesigned student profile section that helps students stand out before they have work experience. Consider: skills, projects, coursework, volunteer work, and early achievements.`,
     criteria: [
-      'OCR + NLP pipeline with >95% field extraction accuracy',
-      'Supports PDF, PNG, JPEG inputs up to 20 pages',
-      'REST API with documented endpoints and under 2s latency',
+      'Addresses the "no experience" problem for new grads',
+      'Increases profile completeness signal for recruiters',
+      'Works within LinkedIn\'s existing design system',
     ],
-    deadline: 'Jul 15, 2026',
-    applicants: 12,
-    featured: true,
+    submit: { type: 'figma', label: 'Figma or Image Link', icon: <IconPhoto size={16}/> },
+    difficulty: 'Intermediate',
+    timeEst: '4–6 hours',
+    score: 94,
+    percentile: 'Top 8%',
   },
   {
     id: 2,
-    category: 'Finance',
-    title: 'Revenue Attribution Model for Multi-Touch Campaigns',
-    company: 'Nexion Systems',
-    companyInitials: 'NS',
-    companyBg: '#0077b6',
-    reward: '$3,200',
-    rewardType: 'Fixed',
-    description: 'Design and implement a data-driven revenue attribution model that accurately assigns credit across multiple marketing touchpoints in a B2B sales cycle.',
+    company: 'Canva',
+    companyColor: '#7c2ae8',
+    companyTextColor: '#fff',
+    companyLogo: <CanvaLogo />,
+    category: 'Marketing / Design',
+    categoryColor: '#7c2ae8',
+    title: 'Create 5 Social Media Templates for College Students',
+    backlogTag: 'Real backlog item · Community request',
+    description: `Canva's template library is light on content made specifically for college students — club announcements, study groups, campus events, internship applications. Students are a massive and underserved audience.`,
+    ask: `Design 5 ready-to-use Canva templates targeting college students. Each template should be practical, on-trend, and editable. Include at least 2 different use cases (e.g. club flyer, LinkedIn announcement).`,
     criteria: [
-      'Implements at least 3 attribution models (linear, time-decay, Shapley)',
-      'Integrates with CRM export (CSV/JSON) and outputs dashboard-ready data',
-      'Documented methodology with statistical validation report',
+      '5 distinct, polished templates with clear use cases',
+      'Follows Canva\'s visual style (clean, modern, accessible)',
+      'Each template has a brief description of who it\'s for',
     ],
-    deadline: 'Jul 22, 2026',
-    applicants: 7,
-    featured: true,
+    submit: { type: 'canva', label: 'Canva Link', icon: <IconPhoto size={16}/> },
+    difficulty: 'Beginner',
+    timeEst: '2–4 hours',
+    score: 89,
+    percentile: 'Top 15%',
   },
   {
     id: 3,
-    category: 'Marketing',
-    title: 'Viral LinkedIn Content Strategy for SaaS Brand',
-    company: 'AlertFlow',
-    companyInitials: 'AF',
-    companyBg: '#333',
-    reward: '$1,800',
-    rewardType: 'Milestone',
-    description: 'Create a 90-day LinkedIn content playbook and produce 12 high-engagement posts that grow the company page following by at least 2,000 targeted followers.',
+    company: 'Fidelity',
+    companyColor: '#538234',
+    companyTextColor: '#fff',
+    companyLogo: <FidelityLogo />,
+    category: 'Finance / Data',
+    categoryColor: '#059669',
+    title: 'Analyze a Dataset and Identify Retirement Trends',
+    backlogTag: 'Real backlog item · Research team request',
+    description: `Our research team wants to understand shifting retirement behavior among millennials vs. Gen X. We have the data but not the bandwidth. This analysis could directly inform product decisions for our retirement planning tools.`,
+    ask: `Using the provided dataset (or public retirement savings data), identify 3 meaningful trends in retirement behavior across age groups. Present your findings with visuals and recommend one product improvement for Fidelity.`,
     criteria: [
-      '12 original posts published over 90 days with minimum 500 impressions each',
-      'Follower growth ≥2,000 from ICP (B2B DevOps/Engineering leads)',
-      'Final report with analytics, A/B test results, and repeatable playbook',
+      '3 data-backed insights with supporting charts',
+      'At least 1 actionable product recommendation',
+      'Clean, readable summary (1-page report or slides)',
     ],
-    deadline: 'Aug 1, 2026',
-    applicants: 23,
-    featured: false,
-  },
-  {
-    id: 4,
-    category: 'Design',
-    title: 'Rebrand Visual Identity for B2B Startup',
-    company: 'Beacon of Hope',
-    companyInitials: 'B',
-    companyBg: '#6b6b6b',
-    reward: '$2,600',
-    rewardType: 'Fixed',
-    description: 'Deliver a complete brand identity overhaul including logo suite, color system, typography, and brand guidelines doc ready for immediate production use.',
-    criteria: [
-      'Logo in 4 variants (full, icon, dark, light) delivered as SVG + PNG',
-      'Brand guidelines PDF covering colors, type, spacing, do/don\'t usage',
-      '3 application mockups (website hero, LinkedIn banner, pitch deck slide)',
-    ],
-    deadline: 'Jul 30, 2026',
-    applicants: 18,
-    featured: false,
-  },
-  {
-    id: 5,
-    category: 'Legal',
-    title: 'SaaS MSA & DPA Template for EU Compliance',
-    company: 'Tech Thinkers',
-    companyInitials: '</>',
-    companyBg: '#1a1a2e',
-    reward: '$5,000',
-    rewardType: 'Fixed',
-    description: 'Draft a production-ready Master Service Agreement and Data Processing Addendum compliant with GDPR, CCPA, and standard SaaS commercial terms for a Series A company.',
-    criteria: [
-      'MSA covers liability caps, IP ownership, SLA remedies, and termination rights',
-      'DPA includes SCCs, sub-processor list template, and breach notification clauses',
-      'Reviewed by qualified legal counsel (verification required)',
-    ],
-    deadline: 'Aug 10, 2026',
-    applicants: 4,
-    featured: true,
-  },
-  {
-    id: 6,
-    category: 'Operations',
-    title: 'SOC 2 Readiness Assessment & Gap Report',
-    company: 'Spot Robotics Podcast',
-    companyInitials: 'SRP',
-    companyBg: '#0077b6',
-    reward: '$3,800',
-    rewardType: 'Milestone',
-    description: 'Conduct a comprehensive SOC 2 Type II readiness assessment, identify control gaps, and deliver a prioritized remediation roadmap with timeline estimates.',
-    criteria: [
-      'Assessment covers all 5 Trust Service Criteria with evidence mapping',
-      'Gap report with risk-ranked findings and effort estimates per control',
-      'Remediation roadmap covering 12 months with owner assignments template',
-    ],
-    deadline: 'Jul 28, 2026',
-    applicants: 9,
-    featured: false,
-  },
-  {
-    id: 7,
-    category: 'Technology',
-    title: 'Open-Source CLI Tool for K8s Cost Optimization',
-    company: 'VaultPath',
-    companyInitials: 'VP',
-    companyBg: '#1a1a2e',
-    reward: '$2,200',
-    rewardType: 'Fixed',
-    description: 'Build and publish an open-source CLI tool that analyzes Kubernetes cluster resource utilization and surfaces actionable cost reduction recommendations.',
-    criteria: [
-      'Works with EKS, GKE, AKS clusters via kubeconfig; outputs JSON + human-readable report',
-      'Identifies idle/oversized workloads and estimates monthly savings',
-      'Published on GitHub with MIT license, README, and passing CI tests',
-    ],
-    deadline: 'Aug 5, 2026',
-    applicants: 15,
-    featured: false,
-  },
-  {
-    id: 8,
-    category: 'Finance',
-    title: 'Financial Model for Series A Due Diligence',
-    company: 'Nexion Systems',
-    companyInitials: 'NS',
-    companyBg: '#0077b6',
-    reward: '$2,900',
-    rewardType: 'Fixed',
-    description: 'Build an investor-ready 5-year financial model with three scenarios, unit economics dashboard, and sensitivity analysis for a B2B SaaS company raising Series A.',
-    criteria: [
-      '5-year P&L, balance sheet, and cash flow with monthly granularity for Y1–Y2',
-      'Unit economics tab: CAC, LTV, payback period, net revenue retention',
-      'Fully documented assumptions tab and one-page exec summary output',
-    ],
-    deadline: 'Jul 18, 2026',
-    applicants: 11,
-    featured: false,
+    submit: { type: 'report', label: 'PDF / Excel / Slides', icon: <IconFileText size={16}/> },
+    difficulty: 'Intermediate',
+    timeEst: '3–5 hours',
+    score: 92,
+    percentile: 'Top 10%',
   },
 ]
 
-const REWARD_COLOR = { Fixed: '#000', Milestone: '#6b6b6b' }
-
 export default function BountyPage() {
-  const [activeCategory, setActiveCategory] = useState('All')
-  const [saved, setSaved] = useState(new Set())
+  const [step, setStep] = useState('browse')   // browse | detail | submit | reviewing | awarded
+  const [selected, setSelected] = useState(null)
+  const [submitText, setSubmitText] = useState('')
+  const [submitLink, setSubmitLink] = useState('')
+  const [reviewProgress, setReviewProgress] = useState(0)
 
-  const visible = activeCategory === 'All'
-    ? BOUNTIES
-    : BOUNTIES.filter(b => b.category === activeCategory)
+  function openBounty(b) { setSelected(b); setStep('detail') }
+  function goBack() { setStep('browse'); setSelected(null); setSubmitText(''); setSubmitLink(''); setReviewProgress(0) }
 
-  const featured = visible.filter(b => b.featured)
-  const rest     = visible.filter(b => !b.featured)
-
-  function toggleSave(id) {
-    setSaved(s => {
-      const n = new Set(s)
-      n.has(id) ? n.delete(id) : n.add(id)
-      return n
-    })
+  function startReview() {
+    setStep('reviewing')
+    setReviewProgress(0)
+    let p = 0
+    const interval = setInterval(() => {
+      p += Math.random() * 18 + 6
+      if (p >= 100) { p = 100; clearInterval(interval); setTimeout(() => setStep('awarded'), 600) }
+      setReviewProgress(Math.min(p, 100))
+    }, 320)
   }
 
+  if (step === 'browse') return <BrowseView bounties={BOUNTIES} onOpen={openBounty} />
+  if (step === 'detail') return <DetailView b={selected} onBack={goBack} onSubmit={() => setStep('submit')} />
+  if (step === 'submit') return <SubmitView b={selected} text={submitText} link={submitLink} onText={setSubmitText} onLink={setSubmitLink} onBack={() => setStep('detail')} onReview={startReview} />
+  if (step === 'reviewing') return <ReviewingView b={selected} progress={reviewProgress} />
+  if (step === 'awarded') return <AwardedView b={selected} onBack={goBack} />
+}
+
+/* ── Browse ── */
+function BrowseView({ bounties, onOpen }) {
   return (
     <div className="bounty-page">
-
-      {/* ── Hero ── */}
       <div className="bounty-hero">
         <div className="bounty-hero-inner">
-          <div className="bounty-hero-badge">
-            <BountyStarIcon size={14} color="#fff" /> BOUNTY BOARD
-          </div>
-          <h1 className="bounty-hero-title">Find & Complete Bounties</h1>
+          <div className="bounty-hero-badge">⚡ BOUNTY BOARD</div>
+          <h1 className="bounty-hero-title">Real Company Backlogs. Real Experience.</h1>
           <p className="bounty-hero-sub">
-            Real work. Real rewards. Browse open bounties from verified companies across six industries.
+            Companies always have work that isn't important enough to assign to a full-time employee. Complete those tasks, prove your skills, earn a verified badge on your LinkedIn profile.
           </p>
+          <div className="bounty-flow-steps">
+            {['Browse Bounties','Open Bounty','Submit Work','AI Review','Badge Awarded'].map((s, i, arr) => (
+              <span key={s} className="bflow">
+                <span className="bflow-dot">{i+1}</span>
+                <span className="bflow-lbl">{s}</span>
+                {i < arr.length - 1 && <span className="bflow-arr">→</span>}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Category filters ── */}
-      <div className="bounty-filters-wrap">
-        <div className="bounty-filters">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              className={`bounty-cat${activeCategory === cat ? ' active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
-            >
-              <CategoryIcon cat={cat} active={activeCategory === cat} />
-              {cat}
-            </button>
+      <div className="bounty-content">
+        <div className="bounty-section-hdr">
+          <span className="bounty-section-label">Open Bounties</span>
+          <span className="bounty-count">{bounties.length} available</span>
+        </div>
+        <div className="bounty-list">
+          {bounties.map(b => (
+            <div className="bl-card" key={b.id}>
+              <div className="bl-left">
+                <div className="bl-logo" style={{ background: b.companyColor }}>
+                  {b.companyLogo}
+                </div>
+                <div className="bl-info">
+                  <div className="bl-company-row">
+                    <span className="bl-company">{b.company}</span>
+                    <span className="bl-backlog">{b.backlogTag}</span>
+                  </div>
+                  <div className="bl-title">{b.title}</div>
+                  <div className="bl-meta-row">
+                    <span className="bl-cat" style={{ color: b.categoryColor, background: b.categoryColor + '15' }}>{b.category}</span>
+                    <span className="bl-submit-tag">
+                      {b.submit.icon} {b.submit.label}
+                    </span>
+                    <span className="bl-time">⏱ {b.timeEst}</span>
+                    <span className="bl-diff">{b.difficulty}</span>
+                  </div>
+                </div>
+              </div>
+              <button className="bl-open-btn" onClick={() => onOpen(b)}>
+                Open Bounty <IconChevronRight size={15}/>
+              </button>
+            </div>
           ))}
         </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div className="bounty-content">
-
-        {/* Featured */}
-        {featured.length > 0 && (
-          <section className="bounty-section">
-            <div className="bounty-section-hdr">
-              <span className="bounty-section-label">⭐ Featured</span>
-              <span className="bounty-count">{featured.length} bounties</span>
-            </div>
-            <div className="bounty-grid">
-              {featured.map(b => <BountyCard key={b.id} b={b} saved={saved.has(b.id)} onSave={() => toggleSave(b.id)} />)}
-            </div>
-          </section>
-        )}
-
-        {/* All others */}
-        {rest.length > 0 && (
-          <section className="bounty-section">
-            <div className="bounty-section-hdr">
-              <span className="bounty-section-label">All Bounties</span>
-              <span className="bounty-count">{rest.length} bounties</span>
-            </div>
-            <div className="bounty-grid">
-              {rest.map(b => <BountyCard key={b.id} b={b} saved={saved.has(b.id)} onSave={() => toggleSave(b.id)} />)}
-            </div>
-          </section>
-        )}
-
-        {visible.length === 0 && (
-          <div className="bounty-empty">
-            <p>No bounties in this category yet — check back soon.</p>
-          </div>
-        )}
       </div>
     </div>
   )
 }
 
-function BountyCard({ b, saved, onSave }) {
-  const [applied, setApplied] = useState(false)
-
+/* ── Detail ── */
+function DetailView({ b, onBack, onSubmit }) {
   return (
-    <div className={`bounty-card${b.featured ? ' bounty-card-featured' : ''}`}>
-      {b.featured && <div className="bounty-featured-ribbon">Featured</div>}
-
-      {/* Card header */}
-      <div className="bc-hdr">
-        <div className="bc-logo" style={{ background: b.companyBg }}>
-          <span style={{ fontSize: b.companyInitials.length > 2 ? 9 : 13 }}>{b.companyInitials}</span>
-        </div>
-        <div className="bc-company-info">
-          <div className="bc-company">{b.company}</div>
-          <div className="bc-cat-badge" style={{ background: CATEGORY_COLORS[b.category]?.bg, color: CATEGORY_COLORS[b.category]?.text }}>
-            {b.category}
-          </div>
-        </div>
-        <button className={`bc-save${saved ? ' saved' : ''}`} onClick={onSave}>
-          <IconBookmark size={16} fill={saved ? 'currentColor' : 'none'} />
-        </button>
+    <div className="bounty-page">
+      <div className="bd-back-bar">
+        <button className="bd-back-btn" onClick={onBack}><IconArrowLeft size={16}/> Back to Bounties</button>
       </div>
 
-      {/* Title & description */}
-      <h3 className="bc-title">{b.title}</h3>
-      <p className="bc-desc">{b.description}</p>
-
-      {/* Criteria */}
-      <div className="bc-criteria-hdr">Completion criteria</div>
-      <ul className="bc-criteria">
-        {b.criteria.map((c, i) => (
-          <li key={i} className="bc-criterion">
-            <div className="bc-check"><IconCheck size={10} strokeWidth={3} /></div>
-            <span>{c}</span>
-          </li>
-        ))}
-      </ul>
-
-      {/* Footer */}
-      <div className="bc-footer">
-        <div className="bc-meta">
-          <div className="bc-reward">
-            <span className="bc-reward-val">{b.reward}</span>
-            <span className="bc-reward-type" style={{ background: REWARD_COLOR[b.rewardType] + '1a', color: REWARD_COLOR[b.rewardType] }}>
-              {b.rewardType}
-            </span>
+      <div className="bd-wrap">
+        <div className="bd-header" style={{ borderTop: `4px solid ${b.companyColor}` }}>
+          <div className="bd-logo" style={{ background: b.companyColor }}>{b.companyLogo}</div>
+          <div>
+            <div className="bd-company">{b.company}</div>
+            <div className="bd-backlog-tag">{b.backlogTag}</div>
           </div>
-          <div className="bc-deadline">
-            <IconClock size={13} color="rgba(0,0,0,0.45)" />
-            <span>Due {b.deadline}</span>
-          </div>
-          <div className="bc-applicants">{b.applicants} applicants</div>
         </div>
-        <div className="bc-actions">
-          <button className="bc-view-btn" onClick={() => setApplied(true)} disabled={applied}>
-            {applied ? <><IconCheck size={14} /> Applied</> : <>View Bounty <IconChevronRight size={14} /></>}
+
+        <h2 className="bd-title">{b.title}</h2>
+
+        <div className="bd-meta-chips">
+          <span className="bd-chip" style={{ color: b.categoryColor, background: b.categoryColor + '15' }}>{b.category}</span>
+          <span className="bd-chip bd-chip-gray">⏱ {b.timeEst}</span>
+          <span className="bd-chip bd-chip-gray">{b.difficulty}</span>
+        </div>
+
+        <div className="bd-section">
+          <div className="bd-section-label">What this is</div>
+          <p className="bd-text">{b.description}</p>
+        </div>
+
+        <div className="bd-section">
+          <div className="bd-section-label">What we're asking for</div>
+          <p className="bd-text">{b.ask}</p>
+        </div>
+
+        <div className="bd-section">
+          <div className="bd-section-label">Completion criteria</div>
+          <ul className="bd-criteria">
+            {b.criteria.map((c, i) => (
+              <li key={i} className="bd-criterion">
+                <span className="bd-check" style={{ background: b.companyColor }}><IconCheck size={10} strokeWidth={3}/></span>
+                {c}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="bd-section bd-submit-section">
+          <div className="bd-section-label">How to submit</div>
+          <div className="bd-submit-row">
+            <span className="bd-submit-ico" style={{ background: b.companyColor + '18', color: b.companyColor }}>
+              {b.submit.icon}
+            </span>
+            <span className="bd-submit-lbl">{b.submit.label}</span>
+          </div>
+        </div>
+
+        <button className="bd-start-btn" style={{ background: b.companyColor }} onClick={onSubmit}>
+          Start This Bounty <IconChevronRight size={16}/>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ── Submit ── */
+function SubmitView({ b, text, link, onText, onLink, onBack, onReview }) {
+  const canSubmit = text.trim().length > 20
+
+  return (
+    <div className="bounty-page">
+      <div className="bd-back-bar">
+        <button className="bd-back-btn" onClick={onBack}><IconArrowLeft size={16}/> Back to Bounty</button>
+      </div>
+
+      <div className="bd-wrap">
+        <div className="bd-header" style={{ borderTop: `4px solid ${b.companyColor}` }}>
+          <div className="bd-logo" style={{ background: b.companyColor }}>{b.companyLogo}</div>
+          <div>
+            <div className="bd-company">{b.company}</div>
+            <div className="bd-title" style={{ fontSize: 16, marginTop: 4 }}>{b.title}</div>
+          </div>
+        </div>
+
+        <div className="bs-form">
+          <label className="bs-label">Describe your solution <span style={{color:'#e03e2d'}}>*</span></label>
+          <textarea
+            className="bs-textarea"
+            placeholder="Explain your approach, key decisions you made, and why your solution solves the problem..."
+            value={text}
+            onChange={e => onText(e.target.value)}
+            rows={6}
+          />
+          <div className="bs-char">{text.length} / 1000</div>
+
+          <label className="bs-label" style={{marginTop: 16}}>
+            {b.submit.icon} {b.submit.label} link
+            <span className="bs-optional"> (optional)</span>
+          </label>
+          <input
+            className="bs-input"
+            placeholder={`Paste your ${b.submit.label} link here...`}
+            value={link}
+            onChange={e => onLink(e.target.value)}
+          />
+
+          <div className="bs-ai-note">
+            <IconSparkles size={15} color={b.companyColor}/>
+            Your submission will be reviewed by AI and scored on clarity, creativity, and impact. Top submissions are shared with the {b.company} team.
+          </div>
+
+          <button
+            className="bd-start-btn"
+            style={{ background: canSubmit ? b.companyColor : '#c8c8c8', cursor: canSubmit ? 'pointer' : 'not-allowed' }}
+            disabled={!canSubmit}
+            onClick={onReview}
+          >
+            Submit for AI Review <IconSparkles size={16}/>
           </button>
         </div>
       </div>
@@ -313,33 +288,130 @@ function BountyCard({ b, saved, onSave }) {
   )
 }
 
-const CATEGORY_COLORS = {
-  Finance:    { bg: '#c8c8c8', text: '#000' },
-  Marketing:  { bg: '#c8c8c8', text: '#000' },
-  Technology: { bg: '#0077b6', text: '#fff' },
-  Design:     { bg: '#c8c8c8', text: '#000' },
-  Legal:      { bg: '#333',    text: '#fff' },
-  Operations: { bg: '#c8c8c8', text: '#000' },
-}
+/* ── Reviewing ── */
+function ReviewingView({ b, progress }) {
+  const steps = [
+    'Reading your submission...',
+    'Checking against bounty criteria...',
+    'Evaluating clarity & creativity...',
+    'Benchmarking against other submissions...',
+    'Generating score & feedback...',
+  ]
+  const activeStep = Math.min(Math.floor(progress / 20), steps.length - 1)
 
-function CategoryIcon({ cat, active }) {
-  const color = active ? '#fff' : 'rgba(0,0,0,0.55)'
-  const icons = {
-    All:        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill={color}/><rect x="8" y="1" width="5" height="5" rx="1" fill={color}/><rect x="1" y="8" width="5" height="5" rx="1" fill={color}/><rect x="8" y="8" width="5" height="5" rx="1" fill={color}/></svg>,
-    Finance:    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M4 4h4.5a1.5 1.5 0 010 3H5a1.5 1.5 0 000 3H10" stroke={color} strokeWidth="1.4" strokeLinecap="round"/></svg>,
-    Marketing:  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 9l3-3 2 2 5-5" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><path d="M10 3h2v2" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    Technology: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1.5" stroke={color} strokeWidth="1.3"/><path d="M4.5 6.5L6 8l3-3" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    Design:     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke={color} strokeWidth="1.3"/><path d="M7 4v3l2 2" stroke={color} strokeWidth="1.3" strokeLinecap="round"/></svg>,
-    Legal:      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M4 2h6" stroke={color} strokeWidth="1.3" strokeLinecap="round"/><path d="M3 5l-2 4h4L3 5zM11 5l-2 4h4L11 5z" stroke={color} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/></svg>,
-    Operations: <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2" stroke={color} strokeWidth="1.3"/><path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.8 2.8l1.4 1.4M9.8 9.8l1.4 1.4M11.2 2.8l-1.4 1.4M4.2 9.8l-1.4 1.4" stroke={color} strokeWidth="1.3" strokeLinecap="round"/></svg>,
-  }
-  return icons[cat] || null
-}
-
-function BountyStarIcon({ size = 16, color = 'currentColor' }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <path d="M8 1L9.8 5.6L14.7 6L11.1 9.1L12.2 14L8 11.5L3.8 14L4.9 9.1L1.3 6L6.2 5.6L8 1Z" fill={color}/>
+    <div className="bounty-page">
+      <div className="bd-wrap br-center">
+        <div className="br-spinner-wrap">
+          <div className="br-spinner" style={{ '--color': b.companyColor }}>
+            <IconSparkles size={28} color={b.companyColor}/>
+          </div>
+        </div>
+        <div className="br-title">AI is reviewing your work</div>
+        <div className="br-company">Scoring against {b.company}'s criteria</div>
+
+        <div className="br-bar-wrap">
+          <div className="br-bar-track">
+            <div className="br-bar-fill" style={{ width: `${progress}%`, background: b.companyColor }}/>
+          </div>
+          <div className="br-pct">{Math.round(progress)}%</div>
+        </div>
+
+        <div className="br-steps">
+          {steps.map((s, i) => (
+            <div key={s} className={`br-step${i < activeStep ? ' done' : i === activeStep ? ' active' : ''}`}>
+              {i < activeStep ? <IconCheck size={13} strokeWidth={3}/> : <span className="br-dot"/>}
+              {s}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Awarded ── */
+function AwardedView({ b, onBack }) {
+  return (
+    <div className="bounty-page">
+      <div className="bd-wrap ba-center">
+        <div className="ba-confetti">🎉</div>
+        <div className="ba-badge-icon" style={{ background: b.companyColor }}>
+          {b.companyLogo}
+        </div>
+
+        <div className="ba-score-row">
+          <div className="ba-score-block">
+            <div className="ba-score-num" style={{ color: b.companyColor }}>{b.score}</div>
+            <div className="ba-score-label">Score</div>
+          </div>
+          <div className="ba-score-divider"/>
+          <div className="ba-score-block">
+            <div className="ba-score-num" style={{ color: b.companyColor }}>{b.percentile}</div>
+            <div className="ba-score-label">of Submissions</div>
+          </div>
+        </div>
+
+        <h2 className="ba-title">Badge Earned!</h2>
+        <p className="ba-subtitle">Your submission scored in the {b.percentile} of all submissions for this bounty.</p>
+
+        <div className="ba-badge-card">
+          <div className="ba-badge-logo" style={{ background: b.companyColor }}>{b.companyLogo}</div>
+          <div className="ba-badge-info">
+            <div className="ba-badge-name">{b.company} Bounty — Completed</div>
+            <div className="ba-badge-meta">Score {b.score}/100 · {b.percentile} · {b.category}</div>
+            <div className="ba-verified">
+              <IconCheck size={11} strokeWidth={3}/> Verified by LinkedIn Bounty AI
+            </div>
+          </div>
+        </div>
+
+        <div className="ba-feedback">
+          <div className="ba-feedback-label"><IconSparkles size={14}/> AI Feedback</div>
+          <p className="ba-feedback-text">
+            Strong submission. Your solution clearly addresses the core problem and demonstrates thoughtful consideration of user needs. The approach is practical and well-scoped. Minor opportunity to strengthen: consider how your solution scales to different user segments.
+          </p>
+        </div>
+
+        <div className="ba-actions">
+          <button className="ba-profile-btn" style={{ background: b.companyColor }}>
+            Add Badge to Profile
+          </button>
+          <button className="ba-more-btn" onClick={onBack}>
+            Browse More Bounties
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Company logos ── */
+function LinkedInLogo() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
+      <rect width="24" height="24" rx="4" fill="transparent"/>
+      <path d="M6.5 8.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 10h3v9H5v-9zM13 10h-3v9h3v-4.5c0-2 2.5-2.2 2.5 0V19h3v-5.5c0-4-4.5-3.8-5.5-2V10z"/>
+    </svg>
+  )
+}
+
+function CanvaLogo() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 100 100" fill="#fff">
+      <circle cx="50" cy="50" r="48" fill="transparent"/>
+      <text x="50" y="68" textAnchor="middle" fontSize="56" fontWeight="900" fontFamily="Georgia,serif" fill="#fff">C</text>
+    </svg>
+  )
+}
+
+function FidelityLogo() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
+      <path d="M4 20V9l8-5 8 5v11H4z" stroke="#fff" strokeWidth="1.5" fill="none"/>
+      <rect x="9" y="13" width="6" height="7" fill="#fff"/>
+      <rect x="7" y="10" width="4" height="3" fill="#fff" rx="0.5"/>
+      <rect x="13" y="10" width="4" height="3" fill="#fff" rx="0.5"/>
     </svg>
   )
 }
