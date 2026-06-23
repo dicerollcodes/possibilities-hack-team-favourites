@@ -3,6 +3,7 @@ import './App.css'
 import Navbar from './components/Navbar'
 import ProfileCard from './components/ProfileCard'
 import MyPagesCard from './components/MyPagesCard'
+import VerifiedChallengesCard from './components/VerifiedChallengesCard'
 import StartPost from './components/StartPost'
 import FeedPosts from './components/FeedPosts'
 import LinkedInNews from './components/LinkedInNews'
@@ -10,8 +11,18 @@ import Puzzles from './components/Puzzles'
 import Footer from './components/Footer'
 import BountyPage from './components/BountyPage'
 
+// Seeded so the profile looks credible on first load — the badge is the product.
+const SEED_BADGES = [
+  { id: 'seed-figma', company: 'Vercel', companyColor: '#111111', title: 'Edge Redirect Resolver', score: 91, percentile: 'Top 11%', rank: null },
+]
+
 export default function App() {
   const [page, setPage] = useState('home')
+  const [badges, setBadges] = useState(SEED_BADGES)
+
+  function earnBadge(badge) {
+    setBadges(prev => (prev.some(b => b.id === badge.id) ? prev : [badge, ...prev]))
+  }
 
   return (
     <div className="li-page">
@@ -19,12 +30,13 @@ export default function App() {
       <div className="li-body">
         <aside className="li-left">
           <ProfileCard />
+          <VerifiedChallengesCard badges={badges} />
           <MyPagesCard onNavigate={setPage} currentPage={page} />
         </aside>
 
         {page === 'bounty' ? (
           <div className="li-bounty-wrap">
-            <BountyPage />
+            <BountyPage onEarnBadge={earnBadge} />
           </div>
         ) : (
           <>

@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import {
-  IconHome, IconUsers, IconBriefcase, IconMessage2, IconBell,
+  IconHome, IconUsers, IconBriefcase, IconTarget, IconMessage2, IconBell,
   IconSearch, IconGridDots, IconBook, IconChevronDown
 } from '@tabler/icons-react'
+
+// Nav ids that map to a real page in App.jsx
+const PAGE_NAV = { home: 'home', bounty: 'bounty' }
 
 const NAV_ITEMS = [
   { id: 'home',     label: 'Home',          Icon: IconHome },
   { id: 'network',  label: 'My Network',    Icon: IconUsers },
   { id: 'jobs',     label: 'Jobs',          Icon: IconBriefcase },
+  { id: 'bounty',   label: 'Bounties',      Icon: IconTarget },
   { id: 'messages', label: 'Messaging',     Icon: IconMessage2, badge: 2 },
   { id: 'notifs',   label: 'Notifications', Icon: IconBell },
 ]
@@ -17,7 +21,13 @@ export default function Navbar({ onNavigate, currentPage }) {
 
   function handleNav(id) {
     setActive(id)
-    if (id === 'home' && onNavigate) onNavigate('home')
+    if (onNavigate && PAGE_NAV[id]) onNavigate(PAGE_NAV[id])
+  }
+
+  // Page-nav items follow the current page; decorative items only light up on home.
+  function isActive(id) {
+    if (PAGE_NAV[id]) return currentPage === PAGE_NAV[id]
+    return active === id && currentPage === 'home'
   }
 
   return (
@@ -35,7 +45,7 @@ export default function Navbar({ onNavigate, currentPage }) {
           {NAV_ITEMS.map(({ id, label, Icon, badge }) => (
             <button
               key={id}
-              className={`nav-item${active === id && currentPage === 'home' ? ' active' : id === 'home' && currentPage !== 'home' ? '' : active === id ? ' active' : ''}`}
+              className={`nav-item${isActive(id) ? ' active' : ''}`}
               onClick={() => handleNav(id)}
             >
               <div className="nav-item-icon">
