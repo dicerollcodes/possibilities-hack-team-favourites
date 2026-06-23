@@ -10,7 +10,7 @@ function BountyIcon() {
 }
 
 const PAGES = [
-  { initials: 'B',    bg: '#0077b6', name: 'Beacon of Hope' },
+  { initials: 'B',    bg: '#f97316', name: 'Beacon of Hope' },
   { initials: 'SRP',  bg: '#333',    name: 'Spot Robotics Podcast', small: true },
   { initials: '</>', bg: '#6b6b6b', name: 'Tech Thinkers', small: true },
 ]

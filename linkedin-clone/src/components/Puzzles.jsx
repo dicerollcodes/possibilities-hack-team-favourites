@@ -5,43 +5,45 @@ const PUZZLES = [
   {
     name: 'Patches #98', sub: '64 connections played',
     icon: (
-      <svg width="40" height="40" viewBox="0 0 40 40">
-        <rect width="40" height="40" fill="#fff" rx="7"/>
-        <rect x="3" y="3" width="15" height="15" rx="2" fill="#0077b6"/>
-        <rect x="22" y="3" width="15" height="15" rx="2" fill="#333"/>
-        <rect x="3" y="22" width="15" height="15" rx="2" fill="#6b6b6b"/>
-        <rect x="22" y="22" width="15" height="15" rx="2" fill="#c8c8c8"/>
+      <svg width="48" height="48" viewBox="0 0 40 40">
+        <rect width="40" height="40" fill="#1a73e8" rx="7"/>
+        <rect x="3" y="3" width="15" height="15" rx="2" fill="#fbbc04"/>
+        <rect x="22" y="3" width="15" height="15" rx="2" fill="#ea4335"/>
+        <rect x="3" y="22" width="15" height="15" rx="2" fill="#34a853"/>
+        <rect x="22" y="22" width="15" height="15" rx="2" fill="#fff"/>
       </svg>
     ),
   },
   {
     name: 'Zip #463', sub: '83 connections played',
     icon: (
-      <svg width="40" height="40" viewBox="0 0 40 40">
-        <rect width="40" height="40" fill="#0077b6" rx="7"/>
-        <polyline points="20,7 13,19 20,17 20,33 27,21 20,23" fill="#fff" stroke="#fff" strokeWidth="1" strokeLinejoin="round"/>
+      <svg width="48" height="48" viewBox="0 0 40 40">
+        <rect width="40" height="40" fill="#f97316" rx="7"/>
+        <polygon points="20,6 24,16 35,16 26,23 29,34 20,27 11,34 14,23 5,16 16,16" fill="#fff"/>
       </svg>
     ),
   },
   {
     name: 'Mini Sudoku #316', sub: '27 connections played',
     icon: (
-      <svg width="40" height="40" viewBox="0 0 40 40">
-        <rect width="40" height="40" fill="#333" rx="7"/>
-        <rect x="4" y="4" width="14" height="14" rx="2" fill="rgba(255,255,255,0.92)"/>
-        <rect x="22" y="4" width="14" height="14" rx="2" fill="rgba(255,255,255,0.92)"/>
-        <rect x="4" y="22" width="14" height="14" rx="2" fill="rgba(255,255,255,0.92)"/>
-        <rect x="22" y="22" width="14" height="14" rx="2" fill="rgba(255,255,255,0.92)"/>
+      <svg width="48" height="48" viewBox="0 0 40 40">
+        <rect width="40" height="40" fill="#0d9488" rx="7"/>
+        <rect x="4" y="4" width="14" height="14" rx="2" fill="rgba(255,255,255,0.95)"/>
+        <rect x="22" y="4" width="14" height="14" rx="2" fill="rgba(255,255,255,0.45)"/>
+        <rect x="4" y="22" width="14" height="14" rx="2" fill="rgba(255,255,255,0.45)"/>
+        <rect x="22" y="22" width="14" height="14" rx="2" fill="rgba(255,255,255,0.95)"/>
       </svg>
     ),
   },
   {
     name: 'Tango #624', sub: '39 connections played',
     icon: (
-      <svg width="40" height="40" viewBox="0 0 40 40">
-        <rect width="40" height="40" fill="#6b6b6b" rx="7"/>
-        <rect x="3" y="3" width="34" height="15" rx="2" fill="rgba(255,255,255,0.92)"/>
-        <rect x="3" y="22" width="34" height="15" rx="2" fill="rgba(255,255,255,0.32)"/>
+      <svg width="48" height="48" viewBox="0 0 40 40">
+        <rect width="40" height="40" fill="#7c3aed" rx="7"/>
+        <circle cx="20" cy="12" r="7" fill="#fff"/>
+        <circle cx="20" cy="12" r="3.5" fill="#7c3aed"/>
+        <rect x="4" y="24" width="32" height="5" rx="2.5" fill="rgba(255,255,255,0.9)"/>
+        <rect x="4" y="32" width="20" height="4" rx="2" fill="rgba(255,255,255,0.45)"/>
       </svg>
     ),
   },

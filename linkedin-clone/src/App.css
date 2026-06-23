@@ -98,10 +98,12 @@
 }
 .prof-av {
   width: 76px; height: 76px; border-radius: 50%;
-  border: 3px solid #fff; background: #0077b6;
+  border: 3px solid #fff; background: #2d6a9f;
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 24px; font-weight: 700;
+  overflow: hidden;
 }
+.prof-av svg { display: block; }
 .prof-texts { padding: 6px 14px 0; }
 .prof-name-row { display: flex; align-items: center; gap: 7px; margin-bottom: 2px; }
 .prof-name { font-weight: 700; font-size: 16px; cursor: pointer; color: #000; }
