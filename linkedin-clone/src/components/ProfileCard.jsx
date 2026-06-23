@@ -63,7 +63,7 @@ export default function ProfileCard() {
 function StarIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}>
-      <path d="M8 1L9.8 5.6L14.7 6L11.1 9.1L12.2 14L8 11.5L3.8 14L4.9 9.1L1.3 6L6.2 5.6L8 1Z" fill="#915907"/>
+      <path d="M8 1L9.8 5.6L14.7 6L11.1 9.1L12.2 14L8 11.5L3.8 14L4.9 9.1L1.3 6L6.2 5.6L8 1Z" fill="#0077b6"/>
     </svg>
   )
 }

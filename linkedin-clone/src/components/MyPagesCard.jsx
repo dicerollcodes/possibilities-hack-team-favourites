@@ -10,20 +10,20 @@ function BountyIcon() {
 }
 
 const PAGES = [
-  { initials: 'B',    bg: '#f4a020', name: 'Beacon of Hope' },
-  { initials: 'SRP',  bg: '#2e6da4', name: 'Spot Robotics Podcast', small: true },
-  { initials: '</>', bg: '#1a1a2e', name: 'Tech Thinkers', small: true },
+  { initials: 'B',    bg: '#0077b6', name: 'Beacon of Hope' },
+  { initials: 'SRP',  bg: '#333',    name: 'Spot Robotics Podcast', small: true },
+  { initials: '</>', bg: '#6b6b6b', name: 'Tech Thinkers', small: true },
 ]
 
 const NAV_LINKS = [
-  { Icon: IconBookmark,    label: 'Saved items' },
-  { Icon: IconLayoutGrid,  label: 'Groups' },
-  { Icon: IconNews,        label: 'Newsletters' },
-  { Icon: IconCalendarEvent, label: 'Events' },
-  { Icon: BountyIcon,       label: 'Bounty' },
+  { Icon: IconBookmark,    label: 'Saved items',  page: null },
+  { Icon: IconLayoutGrid,  label: 'Groups',       page: null },
+  { Icon: IconNews,        label: 'Newsletters',  page: null },
+  { Icon: IconCalendarEvent, label: 'Events',     page: null },
+  { Icon: BountyIcon,       label: 'Bounty',      page: 'bounty' },
 ]
 
-export default function MyPagesCard() {
+export default function MyPagesCard({ onNavigate, currentPage }) {
   return (
     <div className="card">
       <div className="pages-hdr">
@@ -59,9 +59,13 @@ export default function MyPagesCard() {
       </div>
 
       <div className="nav-sec">
-        {NAV_LINKS.map(({ Icon, label }) => (
-          <button className="nav-sec-item" key={label}>
-            <Icon size={20} color="rgba(0,0,0,0.6)" />
+        {NAV_LINKS.map(({ Icon, label, page }) => (
+          <button
+            className={`nav-sec-item${currentPage === page && page ? ' nav-sec-item-active' : ''}`}
+            key={label}
+            onClick={() => page && onNavigate(currentPage === page ? 'home' : page)}
+          >
+            <Icon size={20} color={currentPage === page && page ? '#0a66c2' : 'rgba(0,0,0,0.6)'} />
             {label}
           </button>
         ))}
@@ -73,7 +77,7 @@ export default function MyPagesCard() {
 function StarIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{flexShrink:0}}>
-      <path d="M8 1L9.8 5.6L14.7 6L11.1 9.1L12.2 14L8 11.5L3.8 14L4.9 9.1L1.3 6L6.2 5.6L8 1Z" fill="#915907"/>
+      <path d="M8 1L9.8 5.6L14.7 6L11.1 9.1L12.2 14L8 11.5L3.8 14L4.9 9.1L1.3 6L6.2 5.6L8 1Z" fill="#0077b6"/>
     </svg>
   )
 }

@@ -10,7 +10,7 @@ export default function AcquisitionPost() {
   return (
     <div className="card post-card">
       <div className="post-hdr">
-        <div className="post-av" style={{ background: '#7a6248' }}>NR</div>
+        <div className="post-av" style={{ background: '#6b6b6b' }}>NR</div>
         <div className="post-info">
           <div className="post-nm-row">
             <span className="post-nm">Nelson Ray</span>
@@ -56,7 +56,7 @@ export default function AcquisitionPost() {
 
       <div className="acq-diagram">
         <AcqCompany
-          label="ACQUIRED" labelColor="#ff6b35"
+          label="ACQUIRED" labelColor="#0077b6"
           logo={<TriangleLogo />}
           name="VaultPath"
           sub1="🇺🇸 United States"
@@ -68,7 +68,7 @@ export default function AcquisitionPost() {
           <div>February 18, 2026</div>
         </div>
         <AcqCompany
-          label="ACQUIRER" labelColor="rgba(0,0,0,0.5)"
+          label="ACQUIRER" labelColor="#6b6b6b"
           logo={<CrossLogo />}
           name="Nexion Systems"
           sub1="Technology, Information and Media"
@@ -77,7 +77,7 @@ export default function AcquisitionPost() {
 
       <div className="post-reacts">
         <div className="remojis">
-          {['#0a66c2','#44b700','#e06c2f'].map((bg, i) => (
+          {['#0077b6','#333','#6b6b6b'].map((bg, i) => (
             <div key={i} className="remoji" style={{ background: bg, zIndex: 3 - i }}>
               {['👍','🔗','❤️'][i]}
             </div>

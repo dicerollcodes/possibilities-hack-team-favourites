@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { IconVideo, IconPhoto, IconWriting, IconX } from '@tabler/icons-react'
 
 const ACTIONS = [
-  { Icon: IconVideo,   label: 'Video',        color: '#5f9b41' },
-  { Icon: IconPhoto,   label: 'Photo',         color: '#378fe9' },
-  { Icon: IconWriting, label: 'Write article', color: '#e06c2f' },
+  { Icon: IconVideo,   label: 'Video',        color: '#0077b6' },
+  { Icon: IconPhoto,   label: 'Photo',        color: '#333' },
+  { Icon: IconWriting, label: 'Write article', color: '#6b6b6b' },
 ]
 
 export default function StartPost() {

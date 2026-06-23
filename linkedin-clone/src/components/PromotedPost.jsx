@@ -11,10 +11,10 @@ export default function PromotedPost() {
         <div className="post-info">
           <div className="post-nm-row">
             <span className="post-nm">AlertFlow</span>
-            <IconRosetteDiscountCheck size={16} color="#0a66c2" />
+            <IconRosetteDiscountCheck size={16} color="#0077b6" />
           </div>
           <div className="post-ttl">23,646 followers</div>
-          <div className="post-ttl" style={{ color: 'rgba(0,0,0,0.45)' }}>Promoted</div>
+          <div className="post-ttl" style={{ color: '#6b6b6b' }}>Promoted</div>
         </div>
         <button className="icon-btn"><IconDots size={20} /></button>
       </div>
@@ -38,7 +38,7 @@ export default function PromotedPost() {
 
       <div className="post-reacts" style={{ marginTop: 0, borderTop: 'none' }}>
         <div className="remojis">
-          <div className="remoji" style={{ background: '#0a66c2' }}>👍</div>
+          <div className="remoji" style={{ background: '#0077b6' }}>👍</div>
           <span style={{ marginLeft: 6 }}>142</span>
         </div>
         <span>18 comments · 5 reposts</span>
@@ -52,8 +52,8 @@ export default function PromotedPost() {
 function AlertFlowLogo() {
   return (
     <svg width="30" height="30" viewBox="0 0 30 30">
-      <path d="M7 7L23 7L19 15L23 23L7 23L11 15Z" fill="#a855f7" />
-      <path d="M7 7L15 15L7 23Z" fill="#7c3aed" />
+      <path d="M7 7L23 7L19 15L23 23L7 23L11 15Z" fill="#0077b6" />
+      <path d="M7 7L15 15L7 23Z" fill="#005a8e" />
     </svg>
   )
 }

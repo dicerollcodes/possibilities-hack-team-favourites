@@ -1,0 +1,423 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: in
+        - generic [ref=e8]:
+          - img [ref=e9]
+          - generic [ref=e12]: I'm looking for...
+      - generic [ref=e13]:
+        - button "Home" [ref=e14] [cursor=pointer]:
+          - img [ref=e16]
+          - generic [ref=e20]: Home
+        - button "My Network" [ref=e21] [cursor=pointer]:
+          - img [ref=e23]
+          - generic [ref=e28]: My Network
+        - button "Jobs" [ref=e29] [cursor=pointer]:
+          - img [ref=e31]
+          - generic [ref=e35]: Jobs
+        - button "2 Messaging" [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]:
+            - img [ref=e38]
+            - generic [ref=e40]: "2"
+          - generic [ref=e41]: Messaging
+        - button "Notifications" [ref=e42] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e47]: Notifications
+        - button "PM Me" [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: PM
+          - generic [ref=e50]:
+            - text: Me
+            - img [ref=e51]
+      - generic [ref=e53]:
+        - button "For Business" [ref=e55] [cursor=pointer]:
+          - img [ref=e56]
+          - generic [ref=e66]:
+            - text: For Business
+            - img [ref=e67]
+        - button "Learning" [ref=e69] [cursor=pointer]:
+          - img [ref=e70]
+          - generic [ref=e73]: Learning
+  - generic [ref=e74]:
+    - complementary [ref=e75]:
+      - generic [ref=e76]:
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - generic [ref=e94]: Premium
+        - generic [ref=e96]: PM
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99] [cursor=pointer]: Panav Mhatre
+            - generic [ref=e100]: in
+          - paragraph [ref=e101]: CS @ UT Austin
+          - paragraph [ref=e102]: Austin, Texas Metropolitan Area
+        - generic [ref=e103] [cursor=pointer]:
+          - generic [ref=e104]: S
+          - generic [ref=e105]: Stanford University
+        - generic [ref=e107] [cursor=pointer]:
+          - generic [ref=e108]: Profile viewers
+          - generic [ref=e109]: "290"
+        - generic [ref=e110] [cursor=pointer]:
+          - generic [ref=e111]: Post impressions
+          - generic [ref=e112]: "81"
+        - generic [ref=e113] [cursor=pointer]:
+          - img [ref=e114]
+          - text: Your Premium features
+      - generic [ref=e116]:
+        - generic [ref=e117] [cursor=pointer]:
+          - generic [ref=e118]: My pages (3)
+          - img [ref=e119]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]: B
+            - generic [ref=e124] [cursor=pointer]: Beacon of Hope
+          - generic [ref=e125]:
+            - generic [ref=e126]: Activity
+            - generic [ref=e127]: "0"
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: SRP
+            - generic [ref=e131] [cursor=pointer]: Spot Robotics Podcast
+          - generic [ref=e132]:
+            - generic [ref=e133]: Activity
+            - generic [ref=e134]: "0"
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - generic [ref=e137]: </>
+            - generic [ref=e138] [cursor=pointer]: Tech Thinkers
+          - generic [ref=e139]:
+            - generic [ref=e140]: Activity
+            - generic [ref=e141]: "0"
+        - generic [ref=e142]:
+          - paragraph [ref=e143]: Grow your business faster
+          - generic [ref=e144] [cursor=pointer]:
+            - img [ref=e145]
+            - text: Try Premium Page
+          - generic [ref=e147] [cursor=pointer]:
+            - img [ref=e148]
+            - text: Advertise on LinkedIn
+        - generic [ref=e152]:
+          - button "Saved items" [ref=e153] [cursor=pointer]:
+            - img [ref=e154]
+            - text: Saved items
+          - button "Groups" [ref=e156] [cursor=pointer]:
+            - img [ref=e157]
+            - text: Groups
+          - button "Newsletters" [ref=e162] [cursor=pointer]:
+            - img [ref=e163]
+            - text: Newsletters
+          - button "Events" [ref=e165] [cursor=pointer]:
+            - img [ref=e166]
+            - text: Events
+          - button "Bounty" [active] [ref=e169] [cursor=pointer]:
+            - img [ref=e170]
+            - text: Bounty
+    - generic [ref=e426]:
+      - generic [ref=e427]:
+        - generic [ref=e428]:
+          - generic [ref=e429]:
+            - img [ref=e430]
+            - text: BOUNTY BOARD
+          - heading "Find & Complete Bounties" [level=1] [ref=e432]
+          - paragraph [ref=e433]: Real work. Real rewards. Browse open bounties from verified companies across six industries.
+        - text: ★
+      - generic [ref=e435]:
+        - button "All" [ref=e436] [cursor=pointer]:
+          - img [ref=e437]
+          - text: All
+        - button "Finance" [ref=e442] [cursor=pointer]:
+          - img [ref=e443]
+          - text: Finance
+        - button "Marketing" [ref=e445] [cursor=pointer]:
+          - img [ref=e446]
+          - text: Marketing
+        - button "Technology" [ref=e449] [cursor=pointer]:
+          - img [ref=e450]
+          - text: Technology
+        - button "Design" [ref=e453] [cursor=pointer]:
+          - img [ref=e454]
+          - text: Design
+        - button "Legal" [ref=e457] [cursor=pointer]:
+          - img [ref=e458]
+          - text: Legal
+        - button "Operations" [ref=e461] [cursor=pointer]:
+          - img [ref=e462]
+          - text: Operations
+      - generic [ref=e465]:
+        - generic [ref=e466]:
+          - generic [ref=e467]:
+            - generic [ref=e468]: ⭐ Featured
+            - generic [ref=e469]: 3 bounties
+          - generic [ref=e470]:
+            - generic [ref=e471]:
+              - generic [ref=e472]: Featured
+              - generic [ref=e473]:
+                - generic [ref=e475]: VP
+                - generic [ref=e476]:
+                  - generic [ref=e477]: VaultPath
+                  - generic [ref=e478]: Technology
+                - button [ref=e479] [cursor=pointer]:
+                  - img [ref=e480]
+              - heading "Build an AI-Powered Invoice Parser" [level=3] [ref=e482]
+              - paragraph [ref=e483]: Develop a production-ready ML pipeline that extracts structured data from unstructured invoice PDFs with >95% accuracy across diverse formats.
+              - generic [ref=e484]: Completion criteria
+              - list [ref=e485]:
+                - listitem [ref=e486]:
+                  - img [ref=e488]
+                  - generic [ref=e490]: OCR + NLP pipeline with >95% field extraction accuracy
+                - listitem [ref=e491]:
+                  - img [ref=e493]
+                  - generic [ref=e495]: Supports PDF, PNG, JPEG inputs up to 20 pages
+                - listitem [ref=e496]:
+                  - img [ref=e498]
+                  - generic [ref=e500]: REST API with documented endpoints and under 2s latency
+              - generic [ref=e501]:
+                - generic [ref=e502]:
+                  - generic [ref=e503]:
+                    - generic [ref=e504]: $4,500
+                    - generic [ref=e505]: Fixed
+                  - generic [ref=e506]:
+                    - img [ref=e507]
+                    - generic [ref=e510]: Due Jul 15, 2026
+                  - generic [ref=e511]: 12 applicants
+                - button "View Bounty" [ref=e513] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e514]
+            - generic [ref=e516]:
+              - generic [ref=e517]: Featured
+              - generic [ref=e518]:
+                - generic [ref=e520]: NS
+                - generic [ref=e521]:
+                  - generic [ref=e522]: Nexion Systems
+                  - generic [ref=e523]: Finance
+                - button [ref=e524] [cursor=pointer]:
+                  - img [ref=e525]
+              - heading "Revenue Attribution Model for Multi-Touch Campaigns" [level=3] [ref=e527]
+              - paragraph [ref=e528]: Design and implement a data-driven revenue attribution model that accurately assigns credit across multiple marketing touchpoints in a B2B sales cycle.
+              - generic [ref=e529]: Completion criteria
+              - list [ref=e530]:
+                - listitem [ref=e531]:
+                  - img [ref=e533]
+                  - generic [ref=e535]: Implements at least 3 attribution models (linear, time-decay, Shapley)
+                - listitem [ref=e536]:
+                  - img [ref=e538]
+                  - generic [ref=e540]: Integrates with CRM export (CSV/JSON) and outputs dashboard-ready data
+                - listitem [ref=e541]:
+                  - img [ref=e543]
+                  - generic [ref=e545]: Documented methodology with statistical validation report
+              - generic [ref=e546]:
+                - generic [ref=e547]:
+                  - generic [ref=e548]:
+                    - generic [ref=e549]: $3,200
+                    - generic [ref=e550]: Fixed
+                  - generic [ref=e551]:
+                    - img [ref=e552]
+                    - generic [ref=e555]: Due Jul 22, 2026
+                  - generic [ref=e556]: 7 applicants
+                - button "View Bounty" [ref=e558] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e559]
+            - generic [ref=e561]:
+              - generic [ref=e562]: Featured
+              - generic [ref=e563]:
+                - generic [ref=e565]: </>
+                - generic [ref=e566]:
+                  - generic [ref=e567]: Tech Thinkers
+                  - generic [ref=e568]: Legal
+                - button [ref=e569] [cursor=pointer]:
+                  - img [ref=e570]
+              - heading "SaaS MSA & DPA Template for EU Compliance" [level=3] [ref=e572]
+              - paragraph [ref=e573]: Draft a production-ready Master Service Agreement and Data Processing Addendum compliant with GDPR, CCPA, and standard SaaS commercial terms for a Series A company.
+              - generic [ref=e574]: Completion criteria
+              - list [ref=e575]:
+                - listitem [ref=e576]:
+                  - img [ref=e578]
+                  - generic [ref=e580]: MSA covers liability caps, IP ownership, SLA remedies, and termination rights
+                - listitem [ref=e581]:
+                  - img [ref=e583]
+                  - generic [ref=e585]: DPA includes SCCs, sub-processor list template, and breach notification clauses
+                - listitem [ref=e586]:
+                  - img [ref=e588]
+                  - generic [ref=e590]: Reviewed by qualified legal counsel (verification required)
+              - generic [ref=e591]:
+                - generic [ref=e592]:
+                  - generic [ref=e593]:
+                    - generic [ref=e594]: $5,000
+                    - generic [ref=e595]: Fixed
+                  - generic [ref=e596]:
+                    - img [ref=e597]
+                    - generic [ref=e600]: Due Aug 10, 2026
+                  - generic [ref=e601]: 4 applicants
+                - button "View Bounty" [ref=e603] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e604]
+        - generic [ref=e606]:
+          - generic [ref=e607]:
+            - generic [ref=e608]: All Bounties
+            - generic [ref=e609]: 5 bounties
+          - generic [ref=e610]:
+            - generic [ref=e611]:
+              - generic [ref=e612]:
+                - generic [ref=e614]: AF
+                - generic [ref=e615]:
+                  - generic [ref=e616]: AlertFlow
+                  - generic [ref=e617]: Marketing
+                - button [ref=e618] [cursor=pointer]:
+                  - img [ref=e619]
+              - heading "Viral LinkedIn Content Strategy for SaaS Brand" [level=3] [ref=e621]
+              - paragraph [ref=e622]: Create a 90-day LinkedIn content playbook and produce 12 high-engagement posts that grow the company page following by at least 2,000 targeted followers.
+              - generic [ref=e623]: Completion criteria
+              - list [ref=e624]:
+                - listitem [ref=e625]:
+                  - img [ref=e627]
+                  - generic [ref=e629]: 12 original posts published over 90 days with minimum 500 impressions each
+                - listitem [ref=e630]:
+                  - img [ref=e632]
+                  - generic [ref=e634]: Follower growth ≥2,000 from ICP (B2B DevOps/Engineering leads)
+                - listitem [ref=e635]:
+                  - img [ref=e637]
+                  - generic [ref=e639]: Final report with analytics, A/B test results, and repeatable playbook
+              - generic [ref=e640]:
+                - generic [ref=e641]:
+                  - generic [ref=e642]:
+                    - generic [ref=e643]: $1,800
+                    - generic [ref=e644]: Milestone
+                  - generic [ref=e645]:
+                    - img [ref=e646]
+                    - generic [ref=e649]: Due Aug 1, 2026
+                  - generic [ref=e650]: 23 applicants
+                - button "View Bounty" [ref=e652] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e653]
+            - generic [ref=e655]:
+              - generic [ref=e656]:
+                - generic [ref=e658]: B
+                - generic [ref=e659]:
+                  - generic [ref=e660]: Beacon of Hope
+                  - generic [ref=e661]: Design
+                - button [ref=e662] [cursor=pointer]:
+                  - img [ref=e663]
+              - heading "Rebrand Visual Identity for B2B Startup" [level=3] [ref=e665]
+              - paragraph [ref=e666]: Deliver a complete brand identity overhaul including logo suite, color system, typography, and brand guidelines doc ready for immediate production use.
+              - generic [ref=e667]: Completion criteria
+              - list [ref=e668]:
+                - listitem [ref=e669]:
+                  - img [ref=e671]
+                  - generic [ref=e673]: Logo in 4 variants (full, icon, dark, light) delivered as SVG + PNG
+                - listitem [ref=e674]:
+                  - img [ref=e676]
+                  - generic [ref=e678]: Brand guidelines PDF covering colors, type, spacing, do/don't usage
+                - listitem [ref=e679]:
+                  - img [ref=e681]
+                  - generic [ref=e683]: 3 application mockups (website hero, LinkedIn banner, pitch deck slide)
+              - generic [ref=e684]:
+                - generic [ref=e685]:
+                  - generic [ref=e686]:
+                    - generic [ref=e687]: $2,600
+                    - generic [ref=e688]: Fixed
+                  - generic [ref=e689]:
+                    - img [ref=e690]
+                    - generic [ref=e693]: Due Jul 30, 2026
+                  - generic [ref=e694]: 18 applicants
+                - button "View Bounty" [ref=e696] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e697]
+            - generic [ref=e699]:
+              - generic [ref=e700]:
+                - generic [ref=e702]: SRP
+                - generic [ref=e703]:
+                  - generic [ref=e704]: Spot Robotics Podcast
+                  - generic [ref=e705]: Operations
+                - button [ref=e706] [cursor=pointer]:
+                  - img [ref=e707]
+              - heading "SOC 2 Readiness Assessment & Gap Report" [level=3] [ref=e709]
+              - paragraph [ref=e710]: Conduct a comprehensive SOC 2 Type II readiness assessment, identify control gaps, and deliver a prioritized remediation roadmap with timeline estimates.
+              - generic [ref=e711]: Completion criteria
+              - list [ref=e712]:
+                - listitem [ref=e713]:
+                  - img [ref=e715]
+                  - generic [ref=e717]: Assessment covers all 5 Trust Service Criteria with evidence mapping
+                - listitem [ref=e718]:
+                  - img [ref=e720]
+                  - generic [ref=e722]: Gap report with risk-ranked findings and effort estimates per control
+                - listitem [ref=e723]:
+                  - img [ref=e725]
+                  - generic [ref=e727]: Remediation roadmap covering 12 months with owner assignments template
+              - generic [ref=e728]:
+                - generic [ref=e729]:
+                  - generic [ref=e730]:
+                    - generic [ref=e731]: $3,800
+                    - generic [ref=e732]: Milestone
+                  - generic [ref=e733]:
+                    - img [ref=e734]
+                    - generic [ref=e737]: Due Jul 28, 2026
+                  - generic [ref=e738]: 9 applicants
+                - button "View Bounty" [ref=e740] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e741]
+            - generic [ref=e743]:
+              - generic [ref=e744]:
+                - generic [ref=e746]: VP
+                - generic [ref=e747]:
+                  - generic [ref=e748]: VaultPath
+                  - generic [ref=e749]: Technology
+                - button [ref=e750] [cursor=pointer]:
+                  - img [ref=e751]
+              - heading "Open-Source CLI Tool for K8s Cost Optimization" [level=3] [ref=e753]
+              - paragraph [ref=e754]: Build and publish an open-source CLI tool that analyzes Kubernetes cluster resource utilization and surfaces actionable cost reduction recommendations.
+              - generic [ref=e755]: Completion criteria
+              - list [ref=e756]:
+                - listitem [ref=e757]:
+                  - img [ref=e759]
+                  - generic [ref=e761]: Works with EKS, GKE, AKS clusters via kubeconfig; outputs JSON + human-readable report
+                - listitem [ref=e762]:
+                  - img [ref=e764]
+                  - generic [ref=e766]: Identifies idle/oversized workloads and estimates monthly savings
+                - listitem [ref=e767]:
+                  - img [ref=e769]
+                  - generic [ref=e771]: Published on GitHub with MIT license, README, and passing CI tests
+              - generic [ref=e772]:
+                - generic [ref=e773]:
+                  - generic [ref=e774]:
+                    - generic [ref=e775]: $2,200
+                    - generic [ref=e776]: Fixed
+                  - generic [ref=e777]:
+                    - img [ref=e778]
+                    - generic [ref=e781]: Due Aug 5, 2026
+                  - generic [ref=e782]: 15 applicants
+                - button "View Bounty" [ref=e784] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e785]
+            - generic [ref=e787]:
+              - generic [ref=e788]:
+                - generic [ref=e790]: NS
+                - generic [ref=e791]:
+                  - generic [ref=e792]: Nexion Systems
+                  - generic [ref=e793]: Finance
+                - button [ref=e794] [cursor=pointer]:
+                  - img [ref=e795]
+              - heading "Financial Model for Series A Due Diligence" [level=3] [ref=e797]
+              - paragraph [ref=e798]: Build an investor-ready 5-year financial model with three scenarios, unit economics dashboard, and sensitivity analysis for a B2B SaaS company raising Series A.
+              - generic [ref=e799]: Completion criteria
+              - list [ref=e800]:
+                - listitem [ref=e801]:
+                  - img [ref=e803]
+                  - generic [ref=e805]: 5-year P&L, balance sheet, and cash flow with monthly granularity for Y1–Y2
+                - listitem [ref=e806]:
+                  - img [ref=e808]
+                  - generic [ref=e810]: "Unit economics tab: CAC, LTV, payback period, net revenue retention"
+                - listitem [ref=e811]:
+                  - img [ref=e813]
+                  - generic [ref=e815]: Fully documented assumptions tab and one-page exec summary output
+              - generic [ref=e816]:
+                - generic [ref=e817]:
+                  - generic [ref=e818]:
+                    - generic [ref=e819]: $2,900
+                    - generic [ref=e820]: Fixed
+                  - generic [ref=e821]:
+                    - img [ref=e822]
+                    - generic [ref=e825]: Due Jul 18, 2026
+                  - generic [ref=e826]: 11 applicants
+                - button "View Bounty" [ref=e828] [cursor=pointer]:
+                  - text: View Bounty
+                  - img [ref=e829]
