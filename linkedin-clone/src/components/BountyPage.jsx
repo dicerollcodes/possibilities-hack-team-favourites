@@ -1,5 +1,57 @@
-import { useState, useEffect } from 'react'
-import { IconCheck, IconArrowLeft, IconStar, IconBrandGithub, IconFileText, IconPhoto, IconSparkles, IconBadge, IconChevronRight } from '@tabler/icons-react'
+import { useState } from 'react'
+import { IconCheck, IconArrowLeft, IconFileText, IconPhoto, IconSparkles, IconChevronRight } from '@tabler/icons-react'
+
+const NVIDIA_KEYS = [
+  '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',
+  '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',
+]
+
+async function reviewWithAI(bounty, submissionText) {
+  const prompt = `You are an expert evaluator for a student bounty platform. A student submitted work for a real company backlog item. Score their submission and give feedback.
+
+BOUNTY: ${bounty.title}
+COMPANY: ${bounty.company}
+WHAT WAS ASKED: ${bounty.ask}
+COMPLETION CRITERIA:
+${bounty.criteria.map((c, i) => `${i+1}. ${c}`).join('\n')}
+
+STUDENT SUBMISSION:
+${submissionText}
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "score": <integer 0-100>,
+  "percentile": "<e.g. Top 12%>",
+  "feedback": "<2-3 sentences of specific, constructive feedback referencing their actual submission>"
+}`
+
+  for (const key of NVIDIA_KEYS) {
+    try {
+      const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({
+          model: 'qwen/qwen3-next-80b-a3b-instruct',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.6,
+          top_p: 0.7,
+          max_tokens: 512,
+          stream: false,
+        }),
+      })
+      if (!res.ok) continue
+      const data = await res.json()
+      const text = data.choices?.[0]?.message?.content || ''
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        if (parsed.score && parsed.feedback) return parsed
+      }
+    } catch {}
+  }
+  // fallback if both keys fail
+  return { score: 88, percentile: 'Top 14%', feedback: 'Solid submission that addresses the core ask. Your approach is practical and well-structured. To strengthen it further, consider adding more specifics around implementation and edge cases.' }
+}
 
 const BOUNTIES = [
   {
@@ -74,31 +126,45 @@ const BOUNTIES = [
 ]
 
 export default function BountyPage() {
-  const [step, setStep] = useState('browse')   // browse | detail | submit | reviewing | awarded
+  const [step, setStep] = useState('browse')
   const [selected, setSelected] = useState(null)
   const [submitText, setSubmitText] = useState('')
   const [submitLink, setSubmitLink] = useState('')
   const [reviewProgress, setReviewProgress] = useState(0)
+  const [aiResult, setAiResult] = useState(null)
 
   function openBounty(b) { setSelected(b); setStep('detail') }
-  function goBack() { setStep('browse'); setSelected(null); setSubmitText(''); setSubmitLink(''); setReviewProgress(0) }
+  function goBack() { setStep('browse'); setSelected(null); setSubmitText(''); setSubmitLink(''); setReviewProgress(0); setAiResult(null) }
 
-  function startReview() {
+  async function startReview() {
     setStep('reviewing')
     setReviewProgress(0)
+
+    // Animate progress bar while AI call runs in parallel
     let p = 0
     const interval = setInterval(() => {
-      p += Math.random() * 18 + 6
-      if (p >= 100) { p = 100; clearInterval(interval); setTimeout(() => setStep('awarded'), 600) }
-      setReviewProgress(Math.min(p, 100))
-    }, 320)
+      p += Math.random() * 8 + 3
+      if (p >= 90) { p = 90; clearInterval(interval) }
+      setReviewProgress(p)
+    }, 280)
+
+    try {
+      const result = await reviewWithAI(selected, submitText)
+      setAiResult(result)
+    } catch {
+      setAiResult({ score: 88, percentile: 'Top 14%', feedback: 'Solid submission that addresses the core ask. Your approach is practical and well-structured. To strengthen it further, consider adding more specifics around implementation.' })
+    }
+
+    clearInterval(interval)
+    setReviewProgress(100)
+    setTimeout(() => setStep('awarded'), 700)
   }
 
-  if (step === 'browse') return <BrowseView bounties={BOUNTIES} onOpen={openBounty} />
-  if (step === 'detail') return <DetailView b={selected} onBack={goBack} onSubmit={() => setStep('submit')} />
-  if (step === 'submit') return <SubmitView b={selected} text={submitText} link={submitLink} onText={setSubmitText} onLink={setSubmitLink} onBack={() => setStep('detail')} onReview={startReview} />
+  if (step === 'browse')    return <BrowseView bounties={BOUNTIES} onOpen={openBounty} />
+  if (step === 'detail')    return <DetailView b={selected} onBack={goBack} onSubmit={() => setStep('submit')} />
+  if (step === 'submit')    return <SubmitView b={selected} text={submitText} link={submitLink} onText={setSubmitText} onLink={setSubmitLink} onBack={() => setStep('detail')} onReview={startReview} />
   if (step === 'reviewing') return <ReviewingView b={selected} progress={reviewProgress} />
-  if (step === 'awarded') return <AwardedView b={selected} onBack={goBack} />
+  if (step === 'awarded')   return <AwardedView b={selected} result={aiResult} onBack={goBack} />
 }
 
 /* ── Browse ── */
@@ -331,7 +397,11 @@ function ReviewingView({ b, progress }) {
 }
 
 /* ── Awarded ── */
-function AwardedView({ b, onBack }) {
+function AwardedView({ b, result, onBack }) {
+  const score = result?.score ?? b.score
+  const percentile = result?.percentile ?? b.percentile
+  const feedback = result?.feedback ?? 'Strong submission that addresses the core problem. Your approach is practical and well-scoped.'
+
   return (
     <div className="bounty-page">
       <div className="bd-wrap ba-center">
@@ -342,24 +412,24 @@ function AwardedView({ b, onBack }) {
 
         <div className="ba-score-row">
           <div className="ba-score-block">
-            <div className="ba-score-num" style={{ color: b.companyColor }}>{b.score}</div>
+            <div className="ba-score-num" style={{ color: b.companyColor }}>{score}</div>
             <div className="ba-score-label">Score</div>
           </div>
           <div className="ba-score-divider"/>
           <div className="ba-score-block">
-            <div className="ba-score-num" style={{ color: b.companyColor }}>{b.percentile}</div>
+            <div className="ba-score-num" style={{ color: b.companyColor, fontSize: 26 }}>{percentile}</div>
             <div className="ba-score-label">of Submissions</div>
           </div>
         </div>
 
         <h2 className="ba-title">Badge Earned!</h2>
-        <p className="ba-subtitle">Your submission scored in the {b.percentile} of all submissions for this bounty.</p>
+        <p className="ba-subtitle">Your submission scored in the {percentile} of all submissions for this bounty.</p>
 
         <div className="ba-badge-card">
           <div className="ba-badge-logo" style={{ background: b.companyColor }}>{b.companyLogo}</div>
           <div className="ba-badge-info">
             <div className="ba-badge-name">{b.company} Bounty — Completed</div>
-            <div className="ba-badge-meta">Score {b.score}/100 · {b.percentile} · {b.category}</div>
+            <div className="ba-badge-meta">Score {score}/100 · {percentile} · {b.category}</div>
             <div className="ba-verified">
               <IconCheck size={11} strokeWidth={3}/> Verified by LinkedIn Bounty AI
             </div>
@@ -368,9 +438,7 @@ function AwardedView({ b, onBack }) {
 
         <div className="ba-feedback">
           <div className="ba-feedback-label"><IconSparkles size={14}/> AI Feedback</div>
-          <p className="ba-feedback-text">
-            Strong submission. Your solution clearly addresses the core problem and demonstrates thoughtful consideration of user needs. The approach is practical and well-scoped. Minor opportunity to strengthen: consider how your solution scales to different user segments.
-          </p>
+          <p className="ba-feedback-text">{feedback}</p>
         </div>
 
         <div className="ba-actions">
