@@ -1,5 +1,14 @@
 import { IconChevronDown, IconBookmark, IconLayoutGrid, IconNews, IconCalendarEvent, IconSpeakerphone } from '@tabler/icons-react'
 
+function BountyIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{flexShrink:0}}>
+      <circle cx="10" cy="10" r="9" stroke="rgba(0,0,0,0.6)" strokeWidth="1.5" fill="none"/>
+      <path d="M10 4L11.8 7.6L15.8 8.2L12.9 11L13.6 15L10 13.1L6.4 15L7.1 11L4.2 8.2L8.2 7.6L10 4Z" fill="rgba(0,0,0,0.6)"/>
+    </svg>
+  )
+}
+
 const PAGES = [
   { initials: 'B',    bg: '#f4a020', name: 'Beacon of Hope' },
   { initials: 'SRP',  bg: '#2e6da4', name: 'Spot Robotics Podcast', small: true },
@@ -11,6 +20,7 @@ const NAV_LINKS = [
   { Icon: IconLayoutGrid,  label: 'Groups' },
   { Icon: IconNews,        label: 'Newsletters' },
   { Icon: IconCalendarEvent, label: 'Events' },
+  { Icon: BountyIcon,       label: 'Bounty' },
 ]
 
 export default function MyPagesCard() {
