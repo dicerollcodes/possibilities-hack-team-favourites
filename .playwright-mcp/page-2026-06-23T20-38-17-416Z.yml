@@ -1,0 +1,310 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: in
+        - generic [ref=e8]:
+          - img [ref=e9]
+          - generic [ref=e12]: I'm looking for...
+      - generic [ref=e13]:
+        - button "Home" [ref=e14] [cursor=pointer]:
+          - img [ref=e16]
+          - generic [ref=e20]: Home
+        - button "My Network" [ref=e21] [cursor=pointer]:
+          - img [ref=e23]
+          - generic [ref=e28]: My Network
+        - button "Jobs" [ref=e29] [cursor=pointer]:
+          - img [ref=e31]
+          - generic [ref=e35]: Jobs
+        - button "2 Messaging" [ref=e36] [cursor=pointer]:
+          - generic [ref=e37]:
+            - img [ref=e38]
+            - generic [ref=e40]: "2"
+          - generic [ref=e41]: Messaging
+        - button "Notifications" [ref=e42] [cursor=pointer]:
+          - img [ref=e44]
+          - generic [ref=e47]: Notifications
+        - button "PM Me" [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: PM
+          - generic [ref=e50]:
+            - text: Me
+            - img [ref=e51]
+      - generic [ref=e53]:
+        - button "For Business" [ref=e55] [cursor=pointer]:
+          - img [ref=e56]
+          - generic [ref=e66]:
+            - text: For Business
+            - img [ref=e67]
+        - button "Learning" [ref=e69] [cursor=pointer]:
+          - img [ref=e70]
+          - generic [ref=e73]: Learning
+  - generic [ref=e74]:
+    - complementary [ref=e75]:
+      - generic [ref=e76]:
+        - generic [ref=e77]:
+          - img [ref=e78]
+          - generic [ref=e94]: Premium
+        - generic [ref=e96]: PM
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99] [cursor=pointer]: Panav Mhatre
+            - generic [ref=e100]: in
+          - paragraph [ref=e101]: CS @ UT Austin
+          - paragraph [ref=e102]: Austin, Texas Metropolitan Area
+        - generic [ref=e103] [cursor=pointer]:
+          - generic [ref=e104]: S
+          - generic [ref=e105]: Stanford University
+        - generic [ref=e107] [cursor=pointer]:
+          - generic [ref=e108]: Profile viewers
+          - generic [ref=e109]: "290"
+        - generic [ref=e110] [cursor=pointer]:
+          - generic [ref=e111]: Post impressions
+          - generic [ref=e112]: "81"
+        - generic [ref=e113] [cursor=pointer]:
+          - img [ref=e114]
+          - text: Your Premium features
+      - generic [ref=e116]:
+        - generic [ref=e117] [cursor=pointer]:
+          - generic [ref=e118]: My pages (3)
+          - img [ref=e119]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]: B
+            - generic [ref=e124] [cursor=pointer]: Beacon of Hope
+          - generic [ref=e125]:
+            - generic [ref=e126]: Activity
+            - generic [ref=e127]: "0"
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: SRP
+            - generic [ref=e131] [cursor=pointer]: Spot Robotics Podcast
+          - generic [ref=e132]:
+            - generic [ref=e133]: Activity
+            - generic [ref=e134]: "0"
+        - generic [ref=e135]:
+          - generic [ref=e136]:
+            - generic [ref=e137]: </>
+            - generic [ref=e138] [cursor=pointer]: Tech Thinkers
+          - generic [ref=e139]:
+            - generic [ref=e140]: Activity
+            - generic [ref=e141]: "0"
+        - generic [ref=e142]:
+          - paragraph [ref=e143]: Grow your business faster
+          - generic [ref=e144] [cursor=pointer]:
+            - img [ref=e145]
+            - text: Try Premium Page
+          - generic [ref=e147] [cursor=pointer]:
+            - img [ref=e148]
+            - text: Advertise on LinkedIn
+        - generic [ref=e152]:
+          - button "Saved items" [ref=e153] [cursor=pointer]:
+            - img [ref=e154]
+            - text: Saved items
+          - button "Groups" [ref=e156] [cursor=pointer]:
+            - img [ref=e157]
+            - text: Groups
+          - button "Newsletters" [ref=e162] [cursor=pointer]:
+            - img [ref=e163]
+            - text: Newsletters
+          - button "Events" [ref=e165] [cursor=pointer]:
+            - img [ref=e166]
+            - text: Events
+          - button "Bounty" [ref=e169] [cursor=pointer]:
+            - img [ref=e170]
+            - text: Bounty
+    - main [ref=e173]:
+      - generic [ref=e174]:
+        - generic [ref=e175]:
+          - generic [ref=e176]: PM
+          - button "Start a post" [ref=e177] [cursor=pointer]
+        - generic [ref=e178]:
+          - button "Video" [ref=e179] [cursor=pointer]:
+            - img [ref=e180]
+            - generic [ref=e183]: Video
+          - button "Photo" [ref=e184] [cursor=pointer]:
+            - img [ref=e185]
+            - generic [ref=e189]: Photo
+          - button "Write article" [ref=e190] [cursor=pointer]:
+            - img [ref=e191]
+            - generic [ref=e194]: Write article
+      - generic [ref=e195]:
+        - text: "Sort by:"
+        - strong [ref=e196] [cursor=pointer]: Top
+        - img [ref=e197]
+      - generic [ref=e199]:
+        - generic [ref=e200]:
+          - generic [ref=e201]: NR
+          - generic [ref=e202]:
+            - generic [ref=e203]:
+              - generic [ref=e204] [cursor=pointer]: Nelson Ray
+              - generic [ref=e205]: in
+              - generic [ref=e206]: · 1st
+            - generic [ref=e207]: Business Growth Strategist
+            - generic [ref=e208]:
+              - text: 2h · Edited ·
+              - img [ref=e209]
+          - generic [ref=e213]:
+            - button [ref=e214] [cursor=pointer]:
+              - img [ref=e215]
+            - button [ref=e219] [cursor=pointer]:
+              - img [ref=e220]
+        - generic [ref=e223]: "OFFICIAL STATEMENT: VaultPath has not been acquired by Nexion Systems. We are not merging. No one is buying us. We still answer to no one but our customers — and apparently the comment section of a… more"
+        - heading "Nexion Systems Acquires VaultPath to Enhance" [level=2] [ref=e224]
+        - paragraph [ref=e225] [cursor=pointer]: VaultPath acquired by Nexion Systems
+        - generic [ref=e226]:
+          - generic [ref=e227] [cursor=pointer]: Acquisition
+          - generic [ref=e228] [cursor=pointer]: Government Administration
+          - generic [ref=e229] [cursor=pointer]: 🇺🇸 US
+        - generic [ref=e230] [cursor=pointer]:
+          - generic [ref=e231]: VP
+          - generic [ref=e232]:
+            - generic [ref=e233]: Get the full VaultPath company profile
+            - generic [ref=e234]: Access contacts, investors, buying signals & more
+          - button "Open in Dashboard →" [ref=e235]
+        - generic [ref=e236]:
+          - generic [ref=e237]:
+            - generic [ref=e238]: ACQUIRED
+            - img [ref=e240]
+            - generic [ref=e243]: VaultPath
+            - generic [ref=e244]: 🇺🇸 United States
+            - generic [ref=e245]: Government Administration
+          - generic [ref=e246]:
+            - generic [ref=e247]: Undisclosed amount
+            - generic [ref=e248]: →
+            - generic [ref=e249]: February 18, 2026
+          - generic [ref=e250]:
+            - generic [ref=e251]: ACQUIRER
+            - img [ref=e253]
+            - generic [ref=e255]: Nexion Systems
+            - generic [ref=e256]: Technology, Information and Media
+        - generic [ref=e257]:
+          - generic [ref=e258]:
+            - generic [ref=e259]: 👍
+            - generic [ref=e260]: 🔗
+            - generic [ref=e261]: ❤️
+            - generic [ref=e262]: "51"
+          - generic [ref=e263]: 3 reposts
+        - generic [ref=e264]:
+          - button "Like" [ref=e265] [cursor=pointer]:
+            - img [ref=e266]
+            - text: Like
+          - button "Comment" [ref=e268] [cursor=pointer]:
+            - img [ref=e269]
+            - text: Comment
+          - button "Repost" [ref=e271] [cursor=pointer]:
+            - img [ref=e272]
+            - text: Repost
+          - button "Send" [ref=e275] [cursor=pointer]:
+            - img [ref=e276]
+            - text: Send
+      - generic [ref=e279]:
+        - generic [ref=e280]:
+          - img [ref=e282]
+          - generic [ref=e285]:
+            - generic [ref=e286]:
+              - generic [ref=e287] [cursor=pointer]: AlertFlow
+              - img [ref=e288]
+            - generic [ref=e291]: 23,646 followers
+            - generic [ref=e292]: Promoted
+          - button [ref=e293] [cursor=pointer]:
+            - img [ref=e294]
+        - generic [ref=e298]: Opsgenie is ending. Keep the on-call workflows your team knows, then route every alert to the right engineer with AlertFlow IMR.
+        - generic [ref=e299]:
+          - generic [ref=e301]: "4"
+          - generic [ref=e302]: "5"
+          - generic [ref=e303]: THE DEADLINE
+          - generic [ref=e304]:
+            - text: Opsgenie
+            - text: ends
+          - generic [ref=e305]: April 5, 2027
+        - generic [ref=e306]:
+          - generic [ref=e307]:
+            - generic [ref=e308]: 👍
+            - generic [ref=e309]: "142"
+          - generic [ref=e310]: 18 comments · 5 reposts
+        - generic [ref=e311]:
+          - button "Like" [ref=e312] [cursor=pointer]:
+            - img [ref=e313]
+            - text: Like
+          - button "Comment" [ref=e315] [cursor=pointer]:
+            - img [ref=e316]
+            - text: Comment
+          - button "Repost" [ref=e318] [cursor=pointer]:
+            - img [ref=e319]
+            - text: Repost
+          - button "Send" [ref=e322] [cursor=pointer]:
+            - img [ref=e323]
+            - text: Send
+    - complementary [ref=e326]:
+      - generic [ref=e327]:
+        - generic [ref=e328]:
+          - generic [ref=e329]: LinkedIn News
+          - img [ref=e330] [cursor=pointer]
+        - generic [ref=e333]: Top stories
+        - generic [ref=e334] [cursor=pointer]:
+          - generic [ref=e335]: Prime Day spending expected to soar ...
+          - generic [ref=e336]: 49m ago · 6,632 readers
+        - generic [ref=e337] [cursor=pointer]:
+          - generic [ref=e338]: Oracle cut 21K jobs over the past year ...
+          - generic [ref=e339]: 49m ago · 4,628 readers
+        - generic [ref=e340] [cursor=pointer]:
+          - generic [ref=e341]: Meta unveils new smart glasses, ...
+          - generic [ref=e342]: 49m ago · 2,197 readers
+        - generic [ref=e343] [cursor=pointer]:
+          - generic [ref=e344]: Most US consumers now prefer buying...
+          - generic [ref=e345]: 40m ago · 1,903 readers
+        - generic [ref=e346] [cursor=pointer]:
+          - generic [ref=e347]: Tech selloff pressures Nasdaq, S&P 50...
+          - generic [ref=e348]: 40m ago · 559 readers
+        - button "Show more news" [ref=e349] [cursor=pointer]:
+          - text: Show more news
+          - img [ref=e350]
+      - generic [ref=e352]:
+        - generic [ref=e353]: Today's puzzles
+        - 'button "Patches #98 64 connections played" [ref=e354] [cursor=pointer]':
+          - img [ref=e356]
+          - generic [ref=e362]:
+            - generic [ref=e363]: "Patches #98"
+            - generic [ref=e364]: 64 connections played
+          - img [ref=e365]
+        - 'button "Zip #463 83 connections played" [ref=e367] [cursor=pointer]':
+          - img [ref=e369]
+          - generic [ref=e372]:
+            - generic [ref=e373]: "Zip #463"
+            - generic [ref=e374]: 83 connections played
+          - img [ref=e375]
+        - 'button "Mini Sudoku #316 27 connections played" [ref=e377] [cursor=pointer]':
+          - img [ref=e379]
+          - generic [ref=e385]:
+            - generic [ref=e386]: "Mini Sudoku #316"
+            - generic [ref=e387]: 27 connections played
+          - img [ref=e388]
+        - 'button "Tango #624 39 connections played" [ref=e390] [cursor=pointer]':
+          - img [ref=e392]
+          - generic [ref=e396]:
+            - generic [ref=e397]: "Tango #624"
+            - generic [ref=e398]: 39 connections played
+          - img [ref=e399]
+        - button "Show more" [ref=e401] [cursor=pointer]:
+          - text: Show more
+          - img [ref=e402]
+      - generic [ref=e404]:
+        - generic [ref=e405]:
+          - generic [ref=e406] [cursor=pointer]: About
+          - generic [ref=e407] [cursor=pointer]: Accessibility
+          - generic [ref=e408] [cursor=pointer]: Help Center
+        - generic [ref=e409]:
+          - generic [ref=e410] [cursor=pointer]:
+            - text: Privacy & Terms
+            - img [ref=e411]
+          - generic [ref=e413] [cursor=pointer]: Ad Choices
+          - generic [ref=e414] [cursor=pointer]: Advertising
+        - generic [ref=e415]:
+          - generic [ref=e416] [cursor=pointer]:
+            - text: Business Services
+            - img [ref=e417]
+          - generic [ref=e419] [cursor=pointer]: Get the LinkedIn app
+        - generic [ref=e421] [cursor=pointer]: More
+        - generic [ref=e422]:
+          - generic [ref=e423]: in
+          - generic [ref=e424]: LinkedIn Corp © 2025

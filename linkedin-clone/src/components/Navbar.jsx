@@ -17,6 +17,7 @@ export default function Navbar() {
 
   return (
     <nav className="nav">
+      <div className="nav-inner">
       <div className="nav-left">
         <div className="nav-logo">in</div>
         <div className="nav-search">
@@ -63,6 +64,7 @@ export default function Navbar() {
           <IconBook size={22} />
           <span>Learning</span>
         </button>
+      </div>
       </div>
     </nav>
   )
