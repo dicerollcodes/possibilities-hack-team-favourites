@@ -85,7 +85,7 @@ INSERT INTO bounties (company, company_color, title, category, description, subm
   ('LinkedIn',  '#0a66c2', 'Redesign Student Profile UX',           'Design',      'Improve the profile page experience for recent grads. Focus on skills showcase and first-job storytelling.',          'figma',    '2026-07-12', 34),
   ('Canva',     '#7c2ae8', 'Gen-Z Social Campaign Templates',       'Marketing',   'Create 5 Canva templates targeting college-age users for the back-to-school season. Must feel native to TikTok/IG.', 'figma',    '2026-07-18', 21),
   ('Fidelity',  '#538234', 'Retirement Savings Trend Analysis',     'Finance',     'Analyze Gen-Z retirement savings data and produce an actionable insights report with visualizations.',               'excel',    '2026-07-25', 19),
-  ('Google',    '#4285f4', 'URL Shortener with Analytics Dashboard','Engineering', 'Build a URL shortening service with click tracking and geo analytics. Deploy it publicly.',                          'github',   '2026-08-03', 12)
+  ('Google',    '#4285f4', 'Fix the city-search race condition',     'Engineering', 'A real bug from our Search UX backlog: the city type-ahead shows results that do not match the search box because out-of-order async responses overwrite fresh ones. Diagnose and fix the autocomplete race in a live in-browser IDE.', 'github',   '2026-08-03', 12)
 ON CONFLICT DO NOTHING;
 
 -- 4. SEED — candidates + badges
