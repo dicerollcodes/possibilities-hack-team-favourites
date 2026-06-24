@@ -285,7 +285,7 @@ function AboutCard() {
 function ActivityCard() {
   const posts = [
     {
-      text: 'Just cleared the Vercel "Edge Redirect Resolver" bounty (scored 91, Top 11%) and earned a verified badge. Proof-of-work > another line on a resume. The badge is now on my profile. 🔵',
+      text: 'Just cleared the Google "PageSpeed Report Card Tool" bounty (scored 94, Top 8%) and earned a verified badge. Proof-of-work > another line on a resume. The badge is now on my profile. 🔵',
       meta: 'Panav posted this · 2d',
       reactions: '212',
       comments: '34 comments',

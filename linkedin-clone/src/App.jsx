@@ -13,7 +13,7 @@ import ProfilePage from './components/ProfilePage'
 
 // Seeded so the profile looks credible on first load — the badge is the product.
 const SEED_BADGES = [
-  { id: 'seed-figma', company: 'Vercel', companyColor: '#111111', title: 'Edge Redirect Resolver', score: 91, percentile: 'Top 11%', rank: null },
+  { id: 'seed-google', company: 'Google', companyColor: '#4285f4', title: 'PageSpeed Report Card Tool', score: 94, percentile: 'Top 8%', rank: null },
 ]
 
 export default function App() {
