@@ -650,15 +650,15 @@ function GoogleLogo() {
 }
 function CanvaLogo() {
   return (
-    <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <svg width="26" height="26" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="canva-g2" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#00c4cc"/>
           <stop offset="100%" stopColor="#7c2ae8"/>
         </linearGradient>
       </defs>
-      <circle cx="50" cy="50" r="47" fill="url(#canva-g2)"/>
-      <text x="52" y="72" textAnchor="middle" fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic" fontWeight="700" fontSize="78" fill="#fff">C</text>
+      <circle cx="32" cy="32" r="32" fill="url(#canva-g2)"/>
+      <path fill="#fff" d="M45.6,43.1c-1.7,2.3-3.9,4.7-6.8,6.5c-2.8,1.8-6,3.2-9.8,3.2c-3.5,0-6.4-1.8-8-3.3c-2.4-2.3-3.7-5.6-4.1-8.7c-1.2-9.6,4.7-22.3,13.8-27.8c2.1-1.3,4.4-1.9,6.6-1.9c4.4,0,7.7,3.1,8.1,6.9c0.4,3.4-0.9,6.3-4.7,8.2c-1.9,1-2.9,0.9-3.2,0.5c-0.2-0.3-0.1-0.8,0.3-1.1c3.5-2.9,3.6-5.3,3.2-8.7c-0.3-2.2-1.7-3.6-3.3-3.6c-6.9,0-16.9,15.5-15.5,26.7c0.5,4.4,3.2,9.5,8.8,9.5c1.8,0,3.8-0.5,5.5-1.4c3.9-2,5.6-3.4,7.9-6.6c0.3-0.4,0.6-0.9,0.9-1.3c0.2-0.4,0.6-0.5,0.9-0.5c0.3,0,0.7,0.3,0.7,0.8c0,0.3-0.1,0.9-0.5,1.4C46.3,42.1,46,42.7,45.6,43.1z"/>
     </svg>
   )
 }
