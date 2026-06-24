@@ -568,7 +568,7 @@ function BrowseView({ bounties, onOpen }) {
           {list.map(c => (
             <div className="bl-card" key={c.id} onClick={() => onOpen(c)}>
               <div className="bl-left">
-                <div className="bl-logo" style={{ background: c.companyColor }}>{c.company[0]}</div>
+                <div className="bl-logo" style={{ background: logoBg(c.company, c.companyColor) }}>{logoFor(c.company)}</div>
                 <div className="bl-info">
                   <div className="bl-company-row">
                     <span className="bl-company">{c.company}</span>
@@ -614,7 +614,7 @@ function DetailView({ c, onBack, onSolve }) {
 
       <div className="bd-wrap">
         <div className="bd-header" style={{ borderTop: `4px solid ${c.companyColor}` }}>
-          <div className="bd-logo" style={{ background: c.companyColor }}>{c.company[0]}</div>
+          <div className="bd-logo" style={{ background: logoBg(c.company, c.companyColor) }}>{logoFor(c.company)}</div>
           <div>
             <div className="bd-company">{c.company}</div>
             <div className="bd-backlog-tag"><IconCode size={12} /> {c.category} · {SUBMIT_TYPE_LABELS[c.submission_type] ?? c.submission_type}</div>
@@ -778,7 +778,7 @@ function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
       <div className="cse-topbar">
         <button className="bd-back-btn" style={{ color: '#ccc' }} onClick={onBack}><IconArrowLeft size={15} /> Exit</button>
         <div className="cse-topbar-title">
-          <div className="cse-co-dot" style={{ background: c.companyColor }}>{c.company[0]}</div>
+          <div className="cse-co-dot" style={{ background: logoBg(c.company, c.companyColor) }}>{logoFor(c.company)}</div>
           <span>{c.company} · {c.title}</span>
         </div>
         <div className="cse-topbar-actions">
@@ -874,7 +874,7 @@ function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
       </div>
       <div className="bd-wrap">
         <div className="bd-header" style={{ borderTop: `4px solid ${c.companyColor}` }}>
-          <div className="bd-logo" style={{ background: c.companyColor }}>{c.company[0]}</div>
+          <div className="bd-logo" style={{ background: logoBg(c.company, c.companyColor) }}>{logoFor(c.company)}</div>
           <div>
             <div className="bd-company">{c.company}</div>
             <div className="bd-backlog-tag">{c.title}</div>
@@ -995,7 +995,7 @@ function ResultsView({ c, aiResult, onContinue }) {
     <div className="bounty-page">
       <div className="bd-wrap rs-wrap">
         <div className="rs-hdr">
-          <span className="rs-co" style={{ background: c.companyColor }}>{c.companyLogo}</span>
+          <span className="rs-co" style={{ background: logoBg(c.company, c.companyColor) }}>{c.companyLogo ?? logoFor(c.company)}</span>
           <div>
             <div className="rs-title">{c.company} · {c.title}</div>
             <div className="rs-sub">
@@ -1084,7 +1084,7 @@ function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
         </p>
 
         <div className="ba-badge-card">
-          <div className="ba-badge-logo" style={{ background: c.companyColor }}>{c.companyLogo}</div>
+          <div className="ba-badge-logo" style={{ background: logoBg(c.company, c.companyColor) }}>{c.companyLogo ?? logoFor(c.company)}</div>
           <div className="ba-badge-info">
             <div className="ba-badge-name">{c.company} Bounty · {c.title}</div>
             <div className="ba-badge-meta">Score {score}/100 · {percentile} · {c.category}</div>
@@ -1149,8 +1149,35 @@ function CountNumber({ from, to, reduced }) {
 /* ── Company logos ── */
 function LinkedInLogo() {
   return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff">
+      <path d="M6.94 5a2 2 0 11-4 0 2 2 0 014 0zM7 8.48H3V21h4V8.48zM13.32 8.48H9.34V21h3.94v-6.57c0-3.66 4.77-4 4.77 0V21H22v-7.95c0-6.27-7.06-6.04-8.68-2.96v-1.61z"/>
+    </svg>
+  )
+}
+
+function GoogleLogo() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.35-1.04 2.5-2.21 3.26v2.71h3.57c2.08-1.92 3.28-4.74 3.28-8z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-1 7.28-2.69l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.07c-.22-.66-.35-1.36-.35-2.07s.13-1.41.35-2.07V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.46 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335"/>
+    </svg>
+  )
+}
+
+function CanvaLogo() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 3C10.6 3 3 10.6 3 20s7.6 17 17 17 17-7.6 17-17S29.4 3 20 3zm5.3 24.4c-1.4.9-3 1.4-4.8 1.4-5 0-8.7-3.7-8.7-8.8 0-5.2 3.8-9 9-9 1.6 0 3.1.4 4.3 1.2.3.2.4.5.2.8l-1.3 2c-.2.3-.5.4-.8.2-.7-.4-1.5-.7-2.4-.7-2.8 0-4.8 2.1-4.8 5.4 0 3.2 1.9 5.3 4.7 5.3 1 0 1.9-.3 2.7-.8.3-.2.6-.1.8.2l1.3 2c.2.3.1.6-.2.8z" fill="#fff"/>
+    </svg>
+  )
+}
+
+function FidelityLogo() {
+  return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
-      <path d="M6.5 8.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM5 10h3v9H5v-9zM13 10h-3v9h3v-4.5c0-2 2.5-2.2 2.5 0V19h3v-5.5c0-4-4.5-3.8-5.5-2V10z" />
+      <path d="M4 4h16v2.5H9v4h9v2.5H9V20H6V6.5H4V4z"/>
     </svg>
   )
 }
@@ -1158,7 +1185,7 @@ function LinkedInLogo() {
 function StripeLogo() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
-      <text x="12" y="17" textAnchor="middle" fontSize="18" fontWeight="900" fontFamily="Georgia,serif" fill="#fff">S</text>
+      <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
     </svg>
   )
 }
@@ -1166,7 +1193,23 @@ function StripeLogo() {
 function VercelLogo() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
-      <path d="M12 4l9 16H3L12 4z" />
+      <path d="M12 4l9 16H3L12 4z"/>
     </svg>
   )
+}
+
+function logoBg(company, color) {
+  return company === 'Google' ? '#fff' : color
+}
+
+function logoFor(company) {
+  switch (company) {
+    case 'LinkedIn': return <LinkedInLogo />
+    case 'Google':   return <GoogleLogo />
+    case 'Canva':    return <CanvaLogo />
+    case 'Fidelity': return <FidelityLogo />
+    case 'Stripe':   return <StripeLogo />
+    case 'Vercel':   return <VercelLogo />
+    default:         return <span style={{ fontWeight: 800, fontSize: 16, color: '#fff' }}>{company[0]}</span>
+  }
 }
