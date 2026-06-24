@@ -13,46 +13,36 @@ import { supabase } from '../lib/supabase'
    badge that lives on their profile. AI is allowed; judgment is graded.
 ─────────────────────────────────────────────── */
 
-// Keys come from a gitignored .env.local so no credentials live in source.
-// Supports both schemes: VITE_NVIDIA_KEYS=key1,key2 and VITE_NVIDIA_KEY_1/_2.
-// Without them, grading falls back to a cached score.
-const NVIDIA_KEYS = [
-  ...(import.meta.env.VITE_NVIDIA_KEYS || '').split(','),
-  import.meta.env.VITE_NVIDIA_KEY_1,
-  import.meta.env.VITE_NVIDIA_KEY_2,
-]
-  .map(k => (k || '').trim())
-  .filter(Boolean)
+// API key from gitignored .env — never committed to source.
+const GROQ_KEY = import.meta.env.VITE_GROQ_KEY
 
 // Locked badge claim wording — what the badge certifies, given AI is allowed.
 const BADGE_CLAIM = 'Produced a verified-correct solution and reasoned well about it.'
 
 async function callAI(prompt) {
-  for (const key of NVIDIA_KEYS) {
-    try {
-      const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-        body: JSON.stringify({
-          model: 'meta/llama-3.3-70b-instruct',
-          messages: [
-            { role: 'system', content: 'You are a strict JSON API. Output ONLY a single valid JSON object with no extra text, no markdown, no explanation.' },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.5, top_p: 0.7, max_tokens: 400, stream: false,
-        }),
-      })
-      if (!res.ok) { console.warn('AI key failed', res.status); continue }
-      const data = await res.json()
-      const text = (data.choices?.[0]?.message?.content || '').trim()
-      console.log('[AI raw]', text)
-      const match = text.match(/\{[\s\S]*\}/)
-      if (!match) { console.warn('No JSON found in response'); continue }
-      const parsed = JSON.parse(match[0])
-      if (parsed.score && parsed.feedback) return parsed
-      console.warn('JSON missing score/feedback', parsed)
-    } catch (e) { console.warn('AI call error', e) }
-  }
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: 'You are a strict JSON API. Output ONLY a single valid JSON object with no extra text, no markdown, no explanation.' },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.5, max_tokens: 400,
+      }),
+    })
+    if (!res.ok) { console.warn('[Groq] HTTP', res.status, await res.text()); return null }
+    const data = await res.json()
+    const text = (data.choices?.[0]?.message?.content || '').trim()
+    console.log('[Groq raw]', text)
+    const match = text.match(/\{[\s\S]*\}/)
+    if (!match) { console.warn('[Groq] No JSON in response'); return null }
+    const parsed = JSON.parse(match[0])
+    if (parsed.score && parsed.feedback) return parsed
+    console.warn('[Groq] JSON missing score/feedback', parsed)
+  } catch (e) { console.warn('[Groq] error', e) }
   return null
 }
 
