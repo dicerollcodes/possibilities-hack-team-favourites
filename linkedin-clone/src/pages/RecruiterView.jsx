@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './RecruiterView.css'
+import { supabase } from '../lib/supabase'
 
 const CANDIDATES = [
   { id:1, name:'Alex Chen', school:'UC Berkeley · CS Junior', avatar:'AC', avatarBg:'#0a66c2', score:94, percentile:'Top 8%',
@@ -92,6 +93,46 @@ function ScanningView({ scanCount }) {
 
 /* ─── HOME ─── */
 function HomeView({ onNav }) {
+  const [stats, setStats] = useState({ bounties: 4, submissions: 86, candidates: 1247, badges: 312 })
+  const [topCandidates, setTopCandidates] = useState(CANDIDATES.slice(0, 3))
+  const [topBounties, setTopBounties] = useState(BOUNTIES.slice(0, 3))
+
+  useEffect(() => {
+    // Fetch live counts
+    Promise.all([
+      supabase.from('bounties').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('submissions').select('id', { count: 'exact', head: true }),
+      supabase.from('candidates').select('id', { count: 'exact', head: true }),
+      supabase.from('candidate_badges').select('id', { count: 'exact', head: true }),
+    ]).then(([b, s, c, ba]) => {
+      setStats({
+        bounties: b.count ?? 4,
+        submissions: s.count ?? 86,
+        candidates: c.count ?? 1247,
+        badges: ba.count ?? 312,
+      })
+    }).catch(() => {})
+
+    // Fetch top 3 candidates for preview
+    supabase.from('candidates').select('*').order('score', { ascending: false }).limit(3)
+      .then(({ data }) => {
+        if (data?.length) setTopCandidates(data.map(c => ({ id: c.id, name: c.name, avatar: c.avatar, avatarBg: c.avatar_bg, score: c.score })))
+      }).catch(() => {})
+
+    // Fetch top 3 bounties for preview
+    supabase.from('bounties').select('id,title,company_color,submissions_count').eq('status', 'active').order('submissions_count', { ascending: false }).limit(3)
+      .then(({ data }) => {
+        if (data?.length) setTopBounties(data.map(b => ({ id: b.id, title: b.title, companyColor: b.company_color, submissions: b.submissions_count })))
+      }).catch(() => {})
+  }, [])
+
+  const statCards = [
+    { label: 'Active Bounties', value: stats.bounties.toLocaleString(), icon: '📋', color: '#0a66c2' },
+    { label: 'Total Submissions', value: stats.submissions.toLocaleString(), icon: '📥', color: '#7c2ae8' },
+    { label: 'Candidates Ranked', value: stats.candidates.toLocaleString(), icon: '🏆', color: '#f59e0b' },
+    { label: 'Badges Awarded', value: stats.badges.toLocaleString(), icon: '⭐', color: '#059669' },
+  ]
+
   return (
     <div className="rv-body">
       <div className="rv-home-hero">
@@ -104,12 +145,7 @@ function HomeView({ onNav }) {
 
       {/* stats */}
       <div className="rv-stats-row">
-        {[
-          { label:'Active Bounties', value:'4', icon:'📋', color:'#0a66c2' },
-          { label:'Total Submissions', value:'86', icon:'📥', color:'#7c2ae8' },
-          { label:'Candidates Ranked', value:'1,247', icon:'🏆', color:'#f59e0b' },
-          { label:'Badges Awarded', value:'312', icon:'⭐', color:'#059669' },
-        ].map((s,i)=>(
+        {statCards.map((s,i)=>(
           <div key={s.label} className="rv-stat-card" style={{animationDelay:`${i*0.06}s`}}>
             <div className="rv-stat-icon" style={{background:s.color+'18'}}>{s.icon}</div>
             <div>
@@ -131,7 +167,7 @@ function HomeView({ onNav }) {
           <div className="rv-hcard-title">Candidate Leaderboard</div>
           <div className="rv-hcard-desc">Top students ranked by verified bounty score</div>
           <div className="rv-hcard-divider"/>
-          {CANDIDATES.slice(0,3).map((c,i)=>(
+          {topCandidates.map((c,i)=>(
             <div key={c.id} className="rv-hcard-row">
               <span className="rv-hcard-medal">{RANK_MEDALS[i]}</span>
               <div className="rv-hcard-av" style={{background:c.avatarBg}}>{c.avatar}</div>
@@ -149,7 +185,7 @@ function HomeView({ onNav }) {
           <div className="rv-hcard-title">Active Bounties</div>
           <div className="rv-hcard-desc">Open company tasks accepting student submissions</div>
           <div className="rv-hcard-divider"/>
-          {BOUNTIES.slice(0,3).map(b=>(
+          {topBounties.map(b=>(
             <div key={b.id} className="rv-hcard-row">
               <div className="rv-hcard-dot" style={{background:b.companyColor}}/>
               <span className="rv-hcard-name">{b.title}</span>
@@ -181,17 +217,44 @@ function HomeView({ onNav }) {
 
 /* ─── LEADERBOARD ─── */
 function LeaderboardView({ onProfile }) {
+  const [candidates, setCandidates] = useState(null)
   const [visibleCards, setVisibleCards] = useState(new Set())
   const [sorted, setSorted] = useState(false)
 
   useEffect(() => {
-    ;[4,3,2,1,0].forEach((idx,i)=>{
+    supabase
+      .from('candidates')
+      .select('*, candidate_badges(*)')
+      .order('score', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data?.length) {
+          setCandidates(data.map(c => ({
+            id: c.id,
+            name: c.name,
+            school: c.school,
+            avatar: c.avatar,
+            avatarBg: c.avatar_bg,
+            score: c.score,
+            percentile: c.percentile,
+            badges: (c.candidate_badges || []).map(b => ({ company: b.company, color: b.company_color, task: b.task })),
+          })))
+        } else {
+          setCandidates(CANDIDATES)
+        }
+      })
+      .catch(() => setCandidates(CANDIDATES))
+  }, [])
+
+  useEffect(() => {
+    if (!candidates) return
+    const len = candidates.length
+    ;[...Array(len)].map((_,i)=>len-1-i).forEach((idx,i)=>{
       setTimeout(()=>{
         setVisibleCards(s=>new Set([...s,idx]))
-        if(i===4) setTimeout(()=>setSorted(true),300)
+        if(i===len-1) setTimeout(()=>setSorted(true),300)
       }, i*260)
     })
-  }, [])
+  }, [candidates])
 
   return (
     <div className="rv-body">
@@ -203,13 +266,14 @@ function LeaderboardView({ onProfile }) {
           </div>
           <span className="rv-ai-chip">⭐ AI-Ranked</span>
         </div>
+        {!candidates && <div style={{textAlign:'center',padding:'40px',color:'#6b6b6b'}}>Loading candidates…</div>}
         <div className={`rv-list${sorted?' rv-list-sorted':''}`}>
-          {CANDIDATES.map((c,idx)=>{
+          {(candidates||[]).map((c,idx)=>{
             const visible = visibleCards.has(idx)
             return (
               <div key={c.id}
                 className={`rv-row${visible?' rv-row-visible':''}${sorted&&idx===0?' rv-row-gold':''}`}
-                onClick={()=>onProfile(c)}
+                onClick={()=>onProfile({...c, rank: idx+1})}
               >
                 <div className="rv-rank">
                   {idx<3?<span className="rv-medal-emoji">{['🥇','🥈','🥉'][idx]}</span>:<span className="rv-rank-num">#{idx+1}</span>}
@@ -244,6 +308,32 @@ function LeaderboardView({ onProfile }) {
 
 /* ─── BOUNTIES ─── */
 function BountiesView({ onPost }) {
+  const [bounties, setBounties] = useState(BOUNTIES)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('bounties')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data?.length) {
+          setBounties(data.map(b => ({
+            id: b.id,
+            company: b.company,
+            companyColor: b.company_color,
+            title: b.title,
+            category: b.category,
+            desc: b.description,
+            submissions: b.submissions_count,
+            deadline: b.deadline ? new Date(b.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
+          })))
+        }
+        setLoading(false)
+      })
+  }, [])
+
   return (
     <div className="rv-body">
       <div className="rv-lb-wrap">
@@ -254,26 +344,30 @@ function BountiesView({ onPost }) {
           </div>
           <button className="rv-post-inline-btn" onClick={onPost}>+ Post New</button>
         </div>
-        <div className="rv-bounty-list">
-          {BOUNTIES.map((b,i)=>(
-            <div key={b.id} className="rv-bounty-card" style={{animationDelay:`${i*0.08}s`}}>
-              <div className="rv-bounty-hdr">
-                <div className="rv-bounty-co" style={{background:b.companyColor}}>{b.company[0]}</div>
-                <div style={{flex:1}}>
-                  <div className="rv-bounty-co-name" style={{color:b.companyColor}}>{b.company}</div>
-                  <div className="rv-bounty-title">{b.title}</div>
+        {loading ? (
+          <div style={{textAlign:'center',padding:'40px',color:'#6b6b6b'}}>Loading bounties…</div>
+        ) : (
+          <div className="rv-bounty-list">
+            {bounties.map((b,i)=>(
+              <div key={b.id} className="rv-bounty-card" style={{animationDelay:`${i*0.08}s`}}>
+                <div className="rv-bounty-hdr">
+                  <div className="rv-bounty-co" style={{background:b.companyColor}}>{b.company[0]}</div>
+                  <div style={{flex:1}}>
+                    <div className="rv-bounty-co-name" style={{color:b.companyColor}}>{b.company}</div>
+                    <div className="rv-bounty-title">{b.title}</div>
+                  </div>
+                  <span className="rv-bounty-cat">{b.category}</span>
                 </div>
-                <span className="rv-bounty-cat">{b.category}</span>
+                <p className="rv-bounty-desc">{b.desc}</p>
+                <div className="rv-bounty-footer">
+                  <span className="rv-bounty-meta">📥 {b.submissions} submissions</span>
+                  <span className="rv-bounty-meta">🗓 Due {b.deadline}</span>
+                  <span className="rv-bounty-status">● Active</span>
+                </div>
               </div>
-              <p className="rv-bounty-desc">{b.desc}</p>
-              <div className="rv-bounty-footer">
-                <span className="rv-bounty-meta">📥 {b.submissions} submissions</span>
-                <span className="rv-bounty-meta">🗓 Due {b.deadline}</span>
-                <span className="rv-bounty-status">● Active</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -283,8 +377,32 @@ function BountiesView({ onPost }) {
 function PostBountyView({ onDone }) {
   const [form, setForm] = useState({company:'',title:'',category:'Engineering',desc:'',submitType:'github',deadline:''})
   const [posted, setPosted] = useState(false)
+  const [posting, setPosting] = useState(false)
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
-  const canPost = form.company && form.title && form.desc && form.deadline
+  const canPost = form.company && form.title && form.desc && form.deadline && !posting
+
+  const handlePost = async () => {
+    setPosting(true)
+    try {
+      await supabase.from('bounties').insert({
+        id: `bounty_${Date.now()}`,
+        company: form.company,
+        company_color: '#0a66c2',
+        title: form.title,
+        category: form.category,
+        description: form.desc,
+        submission_type: form.submitType,
+        deadline: form.deadline,
+        submissions_count: 0,
+        status: 'active',
+        potential_job_position: form.category,
+        awardees: [],
+        potential_job_ids: [],
+      })
+    } catch (_) {}
+    setPosting(false)
+    setPosted(true)
+  }
 
   if (posted) return (
     <div className="rv-body rv-center">
@@ -343,7 +461,7 @@ function PostBountyView({ onDone }) {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="#0a66c2"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm-.75 3.5h1.5v5h-1.5v-5zm0 6h1.5v1.5h-1.5V10.5z"/></svg>
             Submissions are automatically scored by LinkedIn Bounty AI on clarity, creativity, and impact.
           </div>
-          <button className="rv-post-btn" disabled={!canPost} style={{opacity:canPost?1:0.45,cursor:canPost?'pointer':'not-allowed'}} onClick={()=>setPosted(true)}>
+          <button className="rv-post-btn" disabled={!canPost} style={{opacity:canPost?1:0.45,cursor:canPost?'pointer':'not-allowed'}} onClick={handlePost}>
             Post Bounty →
           </button>
         </div>
@@ -356,7 +474,7 @@ const SUBMIT_LABELS = { github:'GitHub Repo', figma:'Figma / Image Link', excel:
 
 /* ─── PROFILE ─── */
 function ProfileView({ candidate, onBack }) {
-  const rank = CANDIDATES.indexOf(candidate)+1
+  const rank = candidate.rank ?? 1
   return (
     <div className="rv-body">
       <div className="rp-card">

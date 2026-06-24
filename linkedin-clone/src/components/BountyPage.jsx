@@ -4,6 +4,7 @@ import {
   IconClock, IconUsers, IconShieldCheck, IconCode, IconBolt, IconTarget,
   IconFolder, IconLock,
 } from '@tabler/icons-react'
+import { supabase } from '../lib/supabase'
 
 /* ──────────────────────────────────────────────
    LinkedIn Bounties — proof-of-work for hiring.
@@ -340,12 +341,21 @@ export default function BountyPage({ onEarnBadge }) {
     setAiResult(null)
     setStep('results')
     const files = selected.files.map(f => ({ name: f.name, content: fileContents[f.name] ?? f.content }))
+    let result
     try {
-      const result = await reviewWithAI(selected, files)
-      setAiResult(result)
+      result = await reviewWithAI(selected, files)
     } catch {
-      setAiResult({ score: 88, percentile: 'Top 14%', feedback: 'Correct, readable solution that handles the core cases.' })
+      result = { score: 88, percentile: 'Top 14%', feedback: 'Correct, readable solution that handles the core cases.' }
     }
+    setAiResult(result)
+
+    // Persist to Supabase (non-blocking — demo continues regardless)
+    supabase.from('submissions').insert({
+      submission_url: null,
+      ai_score: result.score,
+      ai_percentile: result.percentile,
+      ai_feedback: result.feedback,
+    }).then(() => {}).catch(() => {})
   }
 
   if (step === 'browse')  return <BrowseView challenges={CHALLENGES} onOpen={openChallenge} />
