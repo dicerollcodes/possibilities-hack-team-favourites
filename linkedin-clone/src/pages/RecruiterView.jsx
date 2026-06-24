@@ -306,10 +306,13 @@ function LeaderboardView({ onProfile }) {
   )
 }
 
+const RECRUITER_COMPANY = 'LinkedIn'
+
 /* ─── BOUNTIES ─── */
 function BountiesView({ onPost }) {
   const [bounties, setBounties] = useState(BOUNTIES)
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('all') // 'all' | 'mine'
 
   useEffect(() => {
     supabase
@@ -334,6 +337,10 @@ function BountiesView({ onPost }) {
       })
   }, [])
 
+  const displayed = filter === 'mine'
+    ? bounties.filter(b => b.company === RECRUITER_COMPANY)
+    : bounties
+
   return (
     <div className="rv-body">
       <div className="rv-lb-wrap">
@@ -344,11 +351,31 @@ function BountiesView({ onPost }) {
           </div>
           <button className="rv-post-inline-btn" onClick={onPost}>+ Post New</button>
         </div>
+
+        <div className="rv-filter-row">
+          <button
+            className={`rv-filter-btn${filter === 'all' ? ' active' : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            All Bounties
+          </button>
+          <button
+            className={`rv-filter-btn${filter === 'mine' ? ' active' : ''}`}
+            onClick={() => setFilter('mine')}
+          >
+            My Bounties
+          </button>
+        </div>
+
         {loading ? (
           <div style={{textAlign:'center',padding:'40px',color:'#6b6b6b'}}>Loading bounties…</div>
+        ) : displayed.length === 0 ? (
+          <div style={{textAlign:'center',padding:'40px',color:'#6b6b6b'}}>
+            No bounties found. <button className="rv-post-inline-btn" style={{marginLeft:8}} onClick={onPost}>Post one →</button>
+          </div>
         ) : (
           <div className="rv-bounty-list">
-            {bounties.map((b,i)=>(
+            {displayed.map((b,i)=>(
               <div key={b.id} className="rv-bounty-card" style={{animationDelay:`${i*0.08}s`}}>
                 <div className="rv-bounty-hdr">
                   <div className="rv-bounty-co" style={{background:b.companyColor}}>{b.company[0]}</div>
