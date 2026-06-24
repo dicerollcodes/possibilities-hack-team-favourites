@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   IconCheck, IconArrowLeft, IconChevronRight, IconSparkles,
   IconClock, IconUsers, IconShieldCheck, IconCode, IconBolt, IconTarget,
-  IconFolder, IconLock,
+  IconFolder, IconLock, IconUpload, IconX, IconFile,
 } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 
@@ -84,10 +84,10 @@ const SUBMIT_TYPE_LABELS = {
 }
 
 const FALLBACK_BOUNTIES = [
-  { id: 'fb1', company: 'LinkedIn', companyColor: '#0a66c2', title: 'New Grad Profile Gap Analysis', category: 'Research / Data', description: 'We keep seeing that new grad profiles get significantly fewer recruiter views than profiles with 2+ years of experience — even when the listed skills match the job requirements. Pull publicly available data from LinkedIn job postings for entry-level roles in 2-3 fields, sample 20-30 public new grad profiles, and compare what skills they list vs. what postings require. Produce a gap report: which skills appear in 5+ job postings but are underrepresented on new grad profiles? Deliverable: a clean PDF or slide deck with your methodology, top 10 skill gaps ranked by frequency, and 2-3 recommendations for how LinkedIn could help students close them.', submission_type: 'presentation', submissions_count: 34, deadline: '2026-07-15' },
-  { id: 'fb2', company: 'Canva', companyColor: '#7c2ae8', title: 'Template Discovery UX Audit', category: 'UX Research', description: 'Our template search has a real problem: search "birthday card" and you get 400 results with no meaningful sorting. Do a thorough UX audit of template search and discovery across 3 competitors — Adobe Express, Microsoft Designer, and Visme. Document the patterns: how do they handle search, filtering, sorting, previewing? Produce 3 specific, actionable recommendations for Canva. Deliverable: a slide deck or Figma document with screenshots, your analysis, and ranked recommendations. This goes directly to our product team.', submission_type: 'figma', submissions_count: 21, deadline: '2026-07-20' },
-  { id: 'fb3', company: 'Fidelity', companyColor: '#538234', title: 'Competitor Investing Onboarding Teardown', category: 'Product Research', description: 'We are redesigning onboarding for first-time investors aged 22-30. Sign up as a new user on Robinhood, Acorns, and Betterment (free tiers only). Document the full flows with screenshots: what do they ask, in what order, what copy do they use, where do they introduce risk? Then produce a teardown: what is each app doing well, what are they doing poorly, and what are the top 3 things Fidelity should borrow or deliberately avoid? Deliverable: a structured report our product team can use directly in our redesign sprint.', submission_type: 'presentation', submissions_count: 19, deadline: '2026-07-28' },
-  { id: 'fb4', company: 'Google', companyColor: '#4285f4', title: 'PageSpeed Report Card Tool', category: 'Engineering', description: 'The PageSpeed Insights API is public and free but the raw JSON is unreadable. Build a tool where a user pastes any URL and gets a clean report card: Core Web Vitals (LCP, CLS, FID), mobile vs. desktop score, and the top 3 issues in plain English. Deploy it publicly. This is a real internal utility on our backlog for developer relations. We evaluate: does it work on any URL, is the output readable to a non-engineer, is the code clean enough to hand off? Submit your live URL and GitHub repo.', submission_type: 'github', submissions_count: 12, deadline: '2026-08-05' },
+  { id: 'fb1', company: 'LinkedIn', companyColor: '#0a66c2', title: 'New Grad Profile Gap Analysis', category: 'Research / Data', description: 'We keep seeing that new grad profiles get significantly fewer recruiter views than profiles with 2+ years of experience — even when the listed skills match the job requirements. Pull publicly available data from LinkedIn job postings for entry-level roles in 2-3 fields, sample 20-30 public new grad profiles, and compare what skills they list vs. what postings require. Produce a gap report: which skills appear in 5+ job postings but are underrepresented on new grad profiles? Deliverable: a clean PDF or slide deck with your methodology, top 10 skill gaps ranked by frequency, and 2-3 recommendations for how LinkedIn could help students close them.', submission_type: 'presentation', submissions_count: 34, submission_cap: 75, deadline: '2026-07-15' },
+  { id: 'fb2', company: 'Canva', companyColor: '#7c2ae8', title: 'Template Discovery UX Audit', category: 'UX Research', description: 'Our template search has a real problem: search "birthday card" and you get 400 results with no meaningful sorting. Do a thorough UX audit of template search and discovery across 3 competitors — Adobe Express, Microsoft Designer, and Visme. Document the patterns: how do they handle search, filtering, sorting, previewing? Produce 3 specific, actionable recommendations for Canva. Deliverable: a slide deck or Figma document with screenshots, your analysis, and ranked recommendations. This goes directly to our product team.', submission_type: 'figma', submissions_count: 21, submission_cap: 60, deadline: '2026-07-20' },
+  { id: 'fb3', company: 'Fidelity', companyColor: '#538234', title: 'Competitor Investing Onboarding Teardown', category: 'Product Research', description: 'We are redesigning onboarding for first-time investors aged 22-30. Sign up as a new user on Robinhood, Acorns, and Betterment (free tiers only). Document the full flows with screenshots: what do they ask, in what order, what copy do they use, where do they introduce risk? Then produce a teardown: what is each app doing well, what are they doing poorly, and what are the top 3 things Fidelity should borrow or deliberately avoid? Deliverable: a structured report our product team can use directly in our redesign sprint.', submission_type: 'presentation', submissions_count: 19, submission_cap: 50, deadline: '2026-07-28' },
+  { id: 'fb4', company: 'Google', companyColor: '#4285f4', title: 'PageSpeed Report Card Tool', category: 'Engineering', description: 'The PageSpeed Insights API is public and free but the raw JSON is unreadable. Build a tool where a user pastes any URL and gets a clean report card: Core Web Vitals (LCP, CLS, FID), mobile vs. desktop score, and the top 3 issues in plain English. Deploy it publicly. This is a real internal utility on our backlog for developer relations. We evaluate: does it work on any URL, is the output readable to a non-engineer, is the code clean enough to hand off? Submit your live URL and GitHub repo.', submission_type: 'github', submissions_count: 12, submission_cap: 100, deadline: '2026-08-05' },
 ]
 
 /* ── kept only so legacy shape refs compile ── */
@@ -290,12 +290,14 @@ Revalidating a path must drop it and all descendants — but never siblings.
 // Funnel the demo plays for every challenge: a large pool narrowed to a
 // trustworthy top 10. The objective gate + dedup are mechanical — the AI
 // only ever scores the ~30 that survive, never the 10k raw submissions.
-function funnelStages(count) {
-  const total = Math.max(count ?? 20, 20)
-  const reviewed = Math.max(Math.floor(total * 0.4), 8)
-  const scored = Math.min(Math.floor(reviewed * 0.4), 30)
+function funnelStages(count, cap) {
+  // submissions_count is live DB submissions; cap is the company's stated limit.
+  // Display realistic-looking totals: treat cap as the pool size.
+  const pool    = Math.max(cap ?? 100, count ?? 20)
+  const reviewed = Math.round(pool * 0.62)
+  const scored   = Math.round(reviewed * 0.28)
   return [
-    { key: 'received',  label: 'Submissions received',         count: total,    ai: false },
+    { key: 'received',  label: 'Submissions received',         count: pool,     ai: false },
     { key: 'reviewed',  label: 'Passed initial quality check', count: reviewed, ai: false },
     { key: 'judged',    label: 'AI-scored on judgment',        count: scored,   ai: true  },
     { key: 'shortlist', label: 'Top 10 — sent to recruiters',  count: 10,       ai: false },
@@ -344,6 +346,7 @@ export default function BountyPage({ onEarnBadge }) {
           description: b.description,
           submission_type: b.submission_type,
           submissions_count: b.submissions_count,
+          submission_cap: b.submission_cap ?? 100,
           deadline: b.deadline,
         })))
         else setBounties(FALLBACK_BOUNTIES)
@@ -423,8 +426,11 @@ function BrowseView({ bounties, onOpen }) {
                   <div className="bl-title">{c.title}</div>
                   <div className="bl-meta-row">
                     <span className="bl-deadline-pill"><IconClock size={11} /> Due {c.deadline ? new Date(c.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</span>
-                    <span className="bl-participants"><IconUsers size={11} /> {(c.submissions_count ?? 0).toLocaleString()} submitted</span>
+                    <span className="bl-participants"><IconUsers size={11} /> {(c.submissions_count ?? 0)} / {c.submission_cap ?? 100} spots filled</span>
                     <span className="bl-diff">{SUBMIT_TYPE_LABELS[c.submission_type] ?? c.submission_type}</span>
+                  </div>
+                  <div className="bl-cap-bar-track">
+                    <div className="bl-cap-bar-fill" style={{ width: `${Math.min(((c.submissions_count ?? 0) / (c.submission_cap ?? 100)) * 100, 100)}%`, background: c.companyColor }} />
                   </div>
                 </div>
               </div>
@@ -480,8 +486,8 @@ function DetailView({ c, onBack, onSolve }) {
           </div>
           <div className="bd-stat-div" />
           <div className="bd-stat">
-            <div className="bd-stat-num">{(c.submissions_count ?? 0).toLocaleString()}</div>
-            <div className="bd-stat-lbl">Submitted</div>
+            <div className="bd-stat-num">{(c.submissions_count ?? 0)} <span style={{fontSize:14,color:'#6b6b6b'}}>/ {c.submission_cap ?? 100}</span></div>
+            <div className="bd-stat-lbl">Spots filled</div>
           </div>
         </div>
 
@@ -529,7 +535,19 @@ function DetailView({ c, onBack, onSolve }) {
 
 /* ── Solve (project submission form) ── */
 function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
+  const [files, setFiles] = useState([])
+  const [dragging, setDragging] = useState(false)
+  const fileRef = useRef(null)
   const canSubmit = url.trim().length > 0 && desc.trim().length > 10
+  const spotsLeft = (c.submission_cap ?? 100) - (c.submissions_count ?? 0)
+
+  function addFiles(incoming) {
+    const next = [...incoming].filter(f => !files.some(e => e.name === f.name))
+    setFiles(prev => [...prev, ...next])
+  }
+  function removeFile(name) { setFiles(prev => prev.filter(f => f.name !== name)) }
+  function onDrop(e) { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }
+
   return (
     <div className="bounty-page">
       <div className="bd-back-bar">
@@ -544,10 +562,16 @@ function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
           </div>
         </div>
 
+        {spotsLeft <= 15 && spotsLeft > 0 && (
+          <div className="sv-spots-warning">
+            ⚡ Only {spotsLeft} spot{spotsLeft !== 1 ? 's' : ''} remaining — this bounty closes at {c.submission_cap} submissions.
+          </div>
+        )}
+
         <h2 className="bd-title">Submit your work</h2>
-        <p className="bd-text" style={{ marginBottom: 28 }}>
-          Paste your link and describe what you built. LinkedIn Bounty AI will review it and score your judgment.
-          Everyone who submits earns a verified badge — no pass/fail gate.
+        <p className="bd-text" style={{ marginBottom: 24 }}>
+          Paste your link, describe your approach, and optionally upload supporting files.
+          LinkedIn Bounty AI reviews everything and scores your judgment.
         </p>
 
         <div className="bd-section">
@@ -567,16 +591,50 @@ function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
           <div className="bd-section-label">Describe your approach <span style={{ color: '#e03e2d' }}>*</span></div>
           <textarea
             className="rv-textarea"
-            style={{ width: '100%', marginTop: 8, minHeight: 120, fontSize: 15 }}
+            style={{ width: '100%', marginTop: 8, minHeight: 110, fontSize: 15 }}
             placeholder="What did you build? What decisions did you make and why? What would you do differently?"
             value={desc}
             onChange={e => onDesc(e.target.value)}
           />
         </div>
 
+        {/* File upload */}
+        <div className="bd-section" style={{ marginTop: 20 }}>
+          <div className="bd-section-label">Supporting files <span style={{ color: '#6b6b6b', fontWeight: 400 }}>(optional)</span></div>
+          <div
+            className={`sv-drop-zone${dragging ? ' dragging' : ''}`}
+            style={{ borderColor: dragging ? c.companyColor : undefined }}
+            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => fileRef.current?.click()}
+          >
+            <IconUpload size={22} style={{ color: dragging ? c.companyColor : '#9b9b9b' }} />
+            <span className="sv-drop-label">Drag files here or <span style={{ color: c.companyColor }}>browse</span></span>
+            <span className="sv-drop-hint">PDF, PNG, XLSX, CSV, ZIP — up to 20 MB each</span>
+            <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={e => addFiles(e.target.files)} />
+          </div>
+
+          {files.length > 0 && (
+            <div className="sv-file-list">
+              <div className="sv-ide-hdr">
+                <IconFolder size={13} /> {c.company.toLowerCase()}-bounty-submission
+              </div>
+              {files.map(f => (
+                <div key={f.name} className="sv-file-row">
+                  <IconFile size={14} style={{ color: '#0a66c2', flexShrink: 0 }} />
+                  <span className="sv-file-name">{f.name}</span>
+                  <span className="sv-file-size">{f.size > 1024*1024 ? `${(f.size/1024/1024).toFixed(1)} MB` : `${Math.round(f.size/1024)} KB`}</span>
+                  <button className="sv-file-remove" onClick={() => removeFile(f.name)}><IconX size={12} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="solve-hidden-note" style={{ marginTop: 16 }}>
           <IconSparkles size={15} />
-          AI reviews your submission and scores your thinking — not just the output.
+          AI reviews your link, description, and files — scored on thinking and judgment, not perfection.
         </div>
 
         <button
@@ -594,7 +652,7 @@ function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
 
 /* ── Results (funnel + top 10) ── */
 function ResultsView({ c, aiResult, onContinue }) {
-  const stages = funnelStages(c.submissions_count)
+  const stages = funnelStages(c.submissions_count, c.submission_cap)
   const reduced = prefersReducedMotion()
   // How many stages are revealed; the AI stage (index 3) waits for the live call.
   const [revealed, setRevealed] = useState(reduced ? 3 : 0)
