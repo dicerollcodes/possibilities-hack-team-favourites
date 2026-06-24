@@ -756,6 +756,40 @@
 .bd-stat-div { width: 1px; height: 32px; background: #c8c8c8; }
 .bd-backlog-tag { display: inline-flex; align-items: center; gap: 4px; }
 
+/* ── Coding Sandbox ── */
+.cse-screen { position: fixed; inset: 52px 0 0 0; z-index: 90; display: flex; flex-direction: column; background: #1e1e1e; }
+.cse-topbar { height: 44px; background: #111; display: flex; align-items: center; padding: 0 14px; gap: 12px; border-bottom: 1px solid #333; flex-shrink: 0; }
+.cse-topbar-title { flex: 1; display: flex; align-items: center; gap: 8px; color: #ccc; font-size: 13px; justify-content: center; }
+.cse-co-dot { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
+.cse-topbar-actions { display: flex; align-items: center; gap: 8px; }
+.cse-run-btn { padding: 5px 13px; background: #2d2d2d; border: 1px solid #444; border-radius: 6px; color: #a3e635; font-size: 12.5px; cursor: pointer; font-family: monospace; }
+.cse-run-btn:hover { background: #3a3a3a; }
+.cse-submit-btn { padding: 5px 14px; border: none; border-radius: 6px; color: #fff; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.cse-body { flex: 1; display: flex; min-height: 0; }
+.cse-brief { width: 280px; flex-shrink: 0; background: #1a1a1a; border-right: 1px solid #333; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 0; }
+.cse-brief-hdr { font-size: 10.5px; text-transform: uppercase; letter-spacing: .8px; color: #666; margin-bottom: 8px; margin-top: 4px; }
+.cse-brief-text { font-size: 12.5px; color: #aaa; line-height: 1.7; margin-bottom: 4px; }
+.cse-brief-item { display: flex; align-items: flex-start; gap: 7px; font-size: 12.5px; color: #bbb; margin-bottom: 6px; line-height: 1.5; }
+.cse-ai-note { margin-top: 16px; display: flex; align-items: flex-start; gap: 6px; font-size: 11.5px; color: #555; line-height: 1.5; }
+.cse-ide { flex: 1; display: flex; min-width: 0; }
+.cse-tree { width: 188px; flex-shrink: 0; background: #181818; border-right: 1px solid #333; padding-top: 6px; overflow-y: auto; }
+.cse-tree-hdr { font-size: 10.5px; color: #666; padding: 6px 12px 4px; text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; gap: 5px; }
+.cse-tree-file { width: 100%; background: none; border: none; display: flex; align-items: center; gap: 7px; padding: 6px 10px; cursor: pointer; color: #aaa; font-size: 12.5px; text-align: left; transition: background 0.1s; }
+.cse-tree-file:hover { background: #252525; }
+.cse-tree-file.active { background: #2d2d2d; color: #fff; }
+.cse-tree-name { font-family: monospace; }
+.cse-glyph { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; flex-shrink: 0; font-family: monospace; }
+.cse-editor-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.cse-editor-hdr { height: 34px; background: #252525; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 14px; gap: 8px; flex-shrink: 0; }
+.cse-dot { width: 10px; height: 10px; border-radius: 50%; }
+.cse-dot.r { background: #ff5f57; } .cse-dot.y { background: #ffbd2e; } .cse-dot.g { background: #28c840; }
+.cse-editor-fname { font-family: monospace; font-size: 12.5px; color: #ccc; }
+.cse-readonly { font-size: 10.5px; color: #555; background: #333; padding: 2px 6px; border-radius: 4px; }
+.cse-close-preview { margin-left: auto; background: #333; border: none; color: #aaa; font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer; }
+.cse-close-preview:hover { color: #fff; }
+.cse-editor { flex: 1; background: #1e1e1e; color: #d4d4d4; border: none; outline: none; resize: none; font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; font-size: 13px; line-height: 1.6; padding: 16px 20px; tab-size: 2; }
+.cse-preview-frame { flex: 1; border: none; background: #fff; }
+
 /* ── Solve: full-width sandbox (escapes the 1128px grid) ── */
 .solve-screen {
   position: fixed; inset: 52px 0 0 0; z-index: 90;

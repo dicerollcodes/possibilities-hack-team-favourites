@@ -83,6 +83,131 @@ const SUBMIT_TYPE_LABELS = {
   presentation: 'Presentation link',
 }
 
+/* ── Starter files for the coding sandbox ── */
+const PAGESPEED_FILES = [
+  {
+    name: 'index.html', lang: 'html', editable: true,
+    content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PageSpeed Report Card</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>PageSpeed Report Card</h1>
+    <p class="subtitle">Paste any URL and get a plain-English performance breakdown.</p>
+    <div class="input-row">
+      <input type="text" id="url-input" placeholder="https://example.com" />
+      <button onclick="analyze()">Analyze →</button>
+    </div>
+    <div id="results" class="results hidden"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>`,
+  },
+  {
+    name: 'app.js', lang: 'js', editable: true,
+    content: `// TODO: implement analyze()
+// API: https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={URL}&strategy=mobile
+// No API key needed for basic usage (rate-limited).
+// Fetch both mobile + desktop, then render into #results.
+
+async function analyze() {
+  const raw = document.getElementById('url-input').value.trim()
+  if (!raw) return
+  const url = raw.startsWith('http') ? raw : 'https://' + raw
+
+  const results = document.getElementById('results')
+  results.classList.remove('hidden')
+  results.innerHTML = '<p class="loading">Analyzing — this takes ~5 seconds...</p>'
+
+  // Your code here
+  // Hint: fetch mobile score, desktop score, LCP, CLS, and top 3 audit opportunities.
+  // Render them using the CSS classes already defined in style.css.
+}`,
+  },
+  {
+    name: 'style.css', lang: 'css', editable: true,
+    content: `* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f8f9fa; color: #1a1a1a; padding: 40px 20px;
+}
+.container { max-width: 680px; margin: 0 auto; }
+h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+.subtitle { color: #666; margin-bottom: 22px; font-size: 14px; }
+
+.input-row { display: flex; gap: 10px; margin-bottom: 24px; }
+input {
+  flex: 1; padding: 11px 14px; border: 2px solid #e0e0e0;
+  border-radius: 8px; font-size: 15px; outline: none;
+}
+input:focus { border-color: #4285f4; }
+button {
+  padding: 11px 20px; background: #4285f4; color: #fff;
+  border: none; border-radius: 8px; font-size: 15px; cursor: pointer; white-space: nowrap;
+}
+button:hover { background: #3367d6; }
+
+.results { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.hidden { display: none; }
+.loading { color: #666; font-size: 14px; }
+
+/* Score grid */
+.score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+.score-card { text-align: center; padding: 18px; border-radius: 10px; background: #f8f9fa; }
+.score-num { font-size: 40px; font-weight: 800; }
+.score-lbl { font-size: 12px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.good { color: #0cce6b; } .ok { color: #ffa400; } .poor { color: #ff4e42; }
+
+/* Vitals */
+.vitals { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.vital { flex: 1; min-width: 120px; background: #f8f9fa; border-radius: 8px; padding: 12px; }
+.vital-val { font-size: 20px; font-weight: 700; }
+.vital-lbl { font-size: 11px; color: #888; margin-top: 2px; }
+
+/* Issues */
+.issues-title { font-size: 13px; font-weight: 600; color: #444; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .4px; }
+.issue { padding: 10px 12px; border-left: 3px solid #ffa400; background: #fff9f0; border-radius: 4px; margin-bottom: 8px; font-size: 14px; line-height: 1.5; }`,
+  },
+  {
+    name: 'README.md', lang: 'md', editable: false,
+    content: `# PageSpeed Report Card — Google Bounty
+
+## What to build
+A tool where a user pastes any URL and gets a clean, plain-English
+performance report: mobile score, desktop score, Core Web Vitals, and
+the top 3 issues explained without jargon.
+
+## The API (no key needed)
+\`\`\`
+GET https://www.googleapis.com/pagespeedonline/v5/runPagespeed
+  ?url=https://example.com
+  &strategy=mobile   # or desktop
+\`\`\`
+Key paths in the response:
+- \`lighthouseResult.categories.performance.score\` × 100 = score
+- \`lighthouseResult.audits['largest-contentful-paint'].displayValue\`
+- \`lighthouseResult.audits['cumulative-layout-shift'].displayValue\`
+- \`lighthouseResult.audits['total-blocking-time'].displayValue\`
+- \`lighthouseResult.audits[id].details.type === 'opportunity'\` → top issues
+
+## Files
+- \`index.html\` — structure (edit freely)
+- \`app.js\`     — your implementation goes here
+- \`style.css\`  — styles ready to use, edit as needed
+- \`README.md\`  — this file (read-only)
+
+## What we evaluate
+Does it work on any URL? Is the output readable to a non-engineer?
+Is the code clean enough to hand off?`,
+  },
+]
+
 const FALLBACK_BOUNTIES = [
   { id: 'fb1', company: 'LinkedIn', companyColor: '#0a66c2', title: 'New Grad Profile Gap Analysis', category: 'Research / Data', description: 'We keep seeing that new grad profiles get significantly fewer recruiter views than profiles with 2+ years of experience — even when the listed skills match the job requirements. Pull publicly available data from LinkedIn job postings for entry-level roles in 2-3 fields, sample 20-30 public new grad profiles, and compare what skills they list vs. what postings require. Produce a gap report: which skills appear in 5+ job postings but are underrepresented on new grad profiles? Deliverable: a clean PDF or slide deck with your methodology, top 10 skill gaps ranked by frequency, and 2-3 recommendations for how LinkedIn could help students close them.', submission_type: 'presentation', submissions_count: 34, submission_cap: 75, deadline: '2026-07-15' },
   { id: 'fb2', company: 'Canva', companyColor: '#7c2ae8', title: 'Template Discovery UX Audit', category: 'UX Research', description: 'Our template search has a real problem: search "birthday card" and you get 400 results with no meaningful sorting. Do a thorough UX audit of template search and discovery across 3 competitors — Adobe Express, Microsoft Designer, and Visme. Document the patterns: how do they handle search, filtering, sorting, previewing? Produce 3 specific, actionable recommendations for Canva. Deliverable: a slide deck or Figma document with screenshots, your analysis, and ranked recommendations. This goes directly to our product team.', submission_type: 'figma', submissions_count: 21, submission_cap: 60, deadline: '2026-07-20' },
@@ -326,11 +451,17 @@ const prefersReducedMotion = () =>
   window.matchMedia &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+function starterFiles(bounty) {
+  if (bounty?.submission_type === 'github') return PAGESPEED_FILES
+  return null
+}
+
 export default function BountyPage({ onEarnBadge }) {
   const [step, setStep] = useState('browse')
   const [selected, setSelected] = useState(null)
   const [submissionUrl, setSubmissionUrl] = useState('')
   const [submissionDesc, setSubmissionDesc] = useState('')
+  const [fileContents, setFileContents] = useState({})
   const [aiResult, setAiResult] = useState(null)
   const [bounties, setBounties] = useState(null)
 
@@ -338,45 +469,74 @@ export default function BountyPage({ onEarnBadge }) {
     supabase.from('bounties').select('*').eq('status', 'active').order('submissions_count', { ascending: false })
       .then(({ data, error }) => {
         if (!error && data?.length) setBounties(data.map(b => ({
-          id: b.id,
-          company: b.company,
-          companyColor: b.company_color,
-          title: b.title,
-          category: b.category,
-          description: b.description,
-          submission_type: b.submission_type,
-          submissions_count: b.submissions_count,
-          submission_cap: b.submission_cap ?? 100,
-          deadline: b.deadline,
+          id: b.id, company: b.company, companyColor: b.company_color,
+          title: b.title, category: b.category, description: b.description,
+          submission_type: b.submission_type, submissions_count: b.submissions_count,
+          submission_cap: b.submission_cap ?? 100, deadline: b.deadline,
         })))
         else setBounties(FALLBACK_BOUNTIES)
       })
       .catch(() => setBounties(FALLBACK_BOUNTIES))
   }, [])
 
-  function openChallenge(c) { setSelected(c); setSubmissionUrl(''); setSubmissionDesc(''); setStep('detail') }
+  function openChallenge(c) {
+    setSelected(c); setSubmissionUrl(''); setSubmissionDesc('')
+    const files = starterFiles(c)
+    setFileContents(files ? Object.fromEntries(files.map(f => [f.name, f.content])) : {})
+    setStep('detail')
+  }
   function resetToBrowse() { setStep('browse'); setSelected(null); setAiResult(null) }
+
+  const isCoding = selected?.submission_type === 'github'
 
   async function submitSolution() {
     setAiResult(null)
     setStep('results')
     let result
     try {
-      result = await reviewWithAI(selected, submissionUrl, submissionDesc)
-    } catch {
-      result = { score: 88, percentile: 'Top 14%', feedback: 'Strong submission that addresses the core brief well.' }
-    }
+      if (isCoding) {
+        const files = starterFiles(selected).map(f => ({ name: f.name, content: fileContents[f.name] ?? f.content }))
+        const repo = files.map(f => `--- ${f.name} ---\n${f.content}`).join('\n\n')
+        const prompt = `You are a senior engineer evaluating a student's implementation of a coding bounty. Grade on correctness, code quality, and whether it actually solves the brief.
+
+COMPANY: ${selected.company}
+BOUNTY: ${selected.title}
+BRIEF: ${selected.description}
+
+SUBMITTED CODE:
+${repo}
+
+Respond ONLY with valid JSON:
+{"score":<integer 70-99>,"percentile":"<e.g. Top 12%>","feedback":"<2-3 sentences of specific feedback on their implementation>"}`
+        for (const key of NVIDIA_KEYS) {
+          try {
+            const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+              body: JSON.stringify({ model: 'qwen/qwen3-next-80b-a3b-instruct', messages: [{ role: 'user', content: prompt }], temperature: 0.6, top_p: 0.7, max_tokens: 512, stream: false }),
+            })
+            if (!res.ok) continue
+            const data = await res.json()
+            const text = data.choices?.[0]?.message?.content || ''
+            const m = text.match(/\{[\s\S]*\}/)
+            if (m) { const p = JSON.parse(m[0]); if (p.score && p.feedback) { result = p; break } }
+          } catch { /* try next */ }
+        }
+      } else {
+        result = await reviewWithAI(selected, submissionUrl, submissionDesc)
+      }
+    } catch { /* fall through */ }
+    result = result ?? { score: 88, percentile: 'Top 14%', feedback: 'Strong submission that clearly addresses the brief. Good thinking on the core approach.' }
     setAiResult(result)
     supabase.from('submissions').insert({
       submission_url: submissionUrl || null,
-      ai_score: result.score,
-      ai_percentile: result.percentile,
-      ai_feedback: result.feedback,
+      ai_score: result.score, ai_percentile: result.percentile, ai_feedback: result.feedback,
     }).then(() => {}).catch(() => {})
   }
 
   if (step === 'browse')  return <BrowseView bounties={bounties} onOpen={openChallenge} />
   if (step === 'detail')  return <DetailView c={selected} onBack={resetToBrowse} onSolve={() => setStep('solve')} />
+  if (step === 'solve' && isCoding) return <CodingSolveView c={selected} files={starterFiles(selected)} fileContents={fileContents} onEdit={(n,v) => setFileContents(p => ({...p,[n]:v}))} onBack={() => setStep('detail')} onSubmit={submitSolution} />
   if (step === 'solve')   return <SolveView c={selected} url={submissionUrl} desc={submissionDesc} onUrl={setSubmissionUrl} onDesc={setSubmissionDesc} onBack={() => setStep('detail')} onSubmit={submitSolution} />
   if (step === 'results') return <ResultsView c={selected} aiResult={aiResult} onContinue={() => setStep('awarded')} />
   if (step === 'awarded') return <AwardedView c={selected} aiResult={aiResult} onEarnBadge={onEarnBadge} onBack={resetToBrowse} />
@@ -534,6 +694,111 @@ function DetailView({ c, onBack, onSolve }) {
 }
 
 /* ── Solve (project submission form) ── */
+/* ── Coding Sandbox ── */
+function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
+  const [activeFile, setActiveFile] = useState(files[0].name)
+  const [preview, setPreview] = useState(false)
+  const previewRef = useRef(null)
+
+  const current = files.find(f => f.name === activeFile) ?? files[0]
+  const content = fileContents[activeFile] ?? current.content
+  const changed = files.some(f => f.editable && (fileContents[f.name] ?? f.content) !== f.content)
+
+  function runPreview() {
+    const html = fileContents['index.html'] ?? files.find(f => f.name === 'index.html')?.content ?? ''
+    const js   = fileContents['app.js']     ?? files.find(f => f.name === 'app.js')?.content ?? ''
+    const css  = fileContents['style.css']  ?? files.find(f => f.name === 'style.css')?.content ?? ''
+    const doc = html
+      .replace('</head>', `<style>${css}</style></head>`)
+      .replace('<script src="app.js"></script>', `<script>${js}</script>`)
+    if (previewRef.current) {
+      previewRef.current.srcdoc = doc
+    }
+    setPreview(true)
+  }
+
+  const GLYPH = { html: { t: 'H', c: '#e34f26', f: '#fff' }, js: { t: 'JS', c: '#f7df1e', f: '#000' }, css: { t: 'C', c: '#264de4', f: '#fff' }, md: { t: 'MD', c: '#555', f: '#fff' } }
+
+  return (
+    <div className="cse-screen">
+      {/* Top bar */}
+      <div className="cse-topbar">
+        <button className="bd-back-btn" style={{ color: '#ccc' }} onClick={onBack}><IconArrowLeft size={15} /> Exit</button>
+        <div className="cse-topbar-title">
+          <div className="cse-co-dot" style={{ background: c.companyColor }}>{c.company[0]}</div>
+          <span>{c.company} · {c.title}</span>
+        </div>
+        <div className="cse-topbar-actions">
+          <button className="cse-run-btn" onClick={runPreview}>▶ Run Preview</button>
+          <button
+            className="cse-submit-btn"
+            style={{ background: changed ? c.companyColor : '#555', cursor: changed ? 'pointer' : 'not-allowed' }}
+            disabled={!changed}
+            onClick={onSubmit}
+          >
+            Submit <IconBolt size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className="cse-body">
+        {/* Problem pane */}
+        <div className="cse-brief">
+          <div className="cse-brief-hdr">Brief</div>
+          <p className="cse-brief-text">{c.description}</p>
+          <div className="cse-brief-hdr" style={{ marginTop: 20 }}>What we evaluate</div>
+          {['Does it work on any URL?', 'Is output readable to a non-engineer?', 'Is the code clean enough to hand off?'].map(s => (
+            <div key={s} className="cse-brief-item">
+              <span className="bd-check" style={{ background: c.companyColor, flexShrink: 0 }}><IconCheck size={9} strokeWidth={3} /></span>
+              {s}
+            </div>
+          ))}
+          <div className="cse-ai-note"><IconSparkles size={13} /> AI grades on judgment — using APIs, docs, or AI tools is fine.</div>
+        </div>
+
+        {/* IDE */}
+        <div className="cse-ide">
+          {/* File tree */}
+          <div className="cse-tree">
+            <div className="cse-tree-hdr"><IconFolder size={13} /> {c.company.toLowerCase()}-bounty</div>
+            {files.map(f => {
+              const g = GLYPH[f.lang] ?? GLYPH.md
+              return (
+                <button key={f.name} className={`cse-tree-file${f.name === activeFile ? ' active' : ''}`} onClick={() => setActiveFile(f.name)}>
+                  <span className="cse-glyph" style={{ background: g.c, color: g.f }}>{g.t}</span>
+                  <span className="cse-tree-name">{f.name}</span>
+                  {!f.editable && <IconLock size={10} style={{ color: '#666', marginLeft: 'auto' }} />}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Editor + preview */}
+          <div className="cse-editor-wrap">
+            <div className="cse-editor-hdr">
+              <span className="cse-dot r" /><span className="cse-dot y" /><span className="cse-dot g" />
+              <span className="cse-editor-fname">{activeFile}</span>
+              {!current.editable && <span className="cse-readonly">read-only</span>}
+              {preview && <button className="cse-close-preview" onClick={() => setPreview(false)}>✕ Close preview</button>}
+            </div>
+            {preview ? (
+              <iframe ref={previewRef} className="cse-preview-frame" sandbox="allow-scripts" title="preview" />
+            ) : (
+              <textarea
+                className="cse-editor"
+                value={content}
+                onChange={e => onEdit(activeFile, e.target.value)}
+                readOnly={!current.editable}
+                spellCheck={false}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
   const [files, setFiles] = useState([])
   const [dragging, setDragging] = useState(false)
