@@ -42,7 +42,24 @@ const SEED_LINKEDIN_BOUNTY = {
   id: 'bounty_li_completed_pilot',
   company: RECRUITER_COMPANY,
   description: 'LinkedIn ran this internal bounty as a completed pilot. Your task: redesign the student profile page to better showcase verified bounty badges to recruiters.',
-  awardees: [{ id: 'user_8821' }, { id: 'user_4410' }, { id: 'user_7793' }],
+  // Panav is our demo submitter — his full solution + live URL live right here
+  // in the bounties.awardees jsonb (the live DB stores arbitrary keys), so the
+  // recruiter sees the actual work without any download.
+  awardees: [
+    {
+      id: 'user_panav',
+      name: 'Panav Sharma',
+      school: 'University of Waterloo · CS',
+      avatar: 'PS',
+      avatar_bg: '#0a66c2',
+      score: 99,
+      time: '4h 26m',
+      solution: "Rebuilt the student profile around recruiter-verified proof. A new badge rail pins completed bounties above the fold; a 'Verified Work' section replaces the generic skills list with evidence — bounty score, time-to-solve, and live links. A recruiter-mode toggle reorders the page to lead with outcomes. Shipped a live React prototype plus Figma source, fully responsive with skeleton-loading states.",
+      solution_url: 'https://panav-profile-redesign.linkedbounty.app',
+    },
+    { id: 'user_4410' },
+    { id: 'user_7793' },
+  ],
   potential_job_position: 'Product Designer',
   potential_job_ids: [],
   relevant_course_name: 'UX/UI Design',
@@ -606,13 +623,35 @@ const BOUNTY_POOL = [
   { id:'p13', name:'Grace Kim',       school:'Cornell · CS Junior',      avatar:'GK', avatarBg:'#059669', score:86, time:'8h 31m', solution:'Research-heavy submission with a competitive teardown of three rival profile pages. Recommendations were sharp.' },
 ]
 
-function makePool() {
-  // deterministic copy so re-renders don't reshuffle
-  return BOUNTY_POOL.map(c => ({ ...c }))
+/* every submission gets a live, viewable solution URL (no download needed) */
+const solutionUrlFor = (c) => c.solution_url || `https://linkedbounty.app/s/${c.id}`
+
+/* Build the medal pool for a bounty. Any awardee stored in the DB with a real
+   solution (e.g. Panav on the seeded LinkedIn bounty) is promoted to the top of
+   the pool so the recruiter reviews the actual submitted work first. */
+function makePool(bounty) {
+  const named = (bounty?.awardees || [])
+    .filter(a => a && a.name && a.solution)
+    .map(a => ({
+      id: a.id,
+      name: a.name,
+      school: a.school || 'Candidate',
+      avatar: a.avatar || a.name.split(' ').map(w => w[0]).join('').slice(0, 2),
+      avatarBg: a.avatar_bg || '#0a66c2',
+      score: a.score ?? 95,
+      time: a.time || '—',
+      solution: a.solution,
+      solution_url: a.solution_url,
+    }))
+  const namedIds = new Set(named.map(c => c.id))
+  const filler = BOUNTY_POOL.filter(c => !namedIds.has(c.id)).map(c => ({ ...c }))
+  return [...named, ...filler]
+    .map(c => ({ ...c, solution_url: solutionUrlFor(c) }))
+    .sort((a, b) => b.score - a.score)
 }
 
 function BountyBoardView({ bounty, onBack, onMessage }) {
-  const [pool] = useState(makePool)
+  const [pool] = useState(() => makePool(bounty))
   const [statuses, setStatuses] = useState({}) // id -> pending | recruiter_ok | awarded | denied
   const [awardOrder, setAwardOrder] = useState([]) // ids in the order medals were finalized
   const [notified, setNotified] = useState({}) // id -> true (engineer emailed)
@@ -721,7 +760,11 @@ function StatusBadge({ status, medalRank }) {
 
 function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, medalRank, onBack, onNotify, onApprove, onDeny, onEngineerApprove, onMessage }) {
   const [email, setEmail] = useState('engineering@linkedin.com')
+  const [reviewing, setReviewing] = useState(false)
   const c = candidate
+  const solutionUrl = c.solution_url || `https://linkedbounty.app/s/${c.id}`
+  // the link an engineer opens to review — carries the submission id
+  const reviewUrl = `https://review.linkedbounty.app/engineering/${bounty.id}/${c.id}`
 
   return (
     <div className="rv-body">
@@ -748,25 +791,37 @@ function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, med
             <button className="rp-btn-secondary rv-sd-msg" onClick={onMessage}>💬 Message</button>
           </div>
 
-          <div className="rv-sd-section-lbl">📝 Solution</div>
+          <div className="rv-sd-section-lbl">📝 Solution summary</div>
           <p className="rv-sd-solution">{c.solution}</p>
+
+          {/* Live, inline preview of the submitted work — no download. */}
+          <div className="rv-sd-section-lbl">🖥 Live submission</div>
+          <SolutionPreview candidate={c} url={solutionUrl} />
           <div className="rv-sd-files">
-            <span className="rv-sd-file">📎 solution.pdf</span>
-            <span className="rv-sd-file">🔗 figma.com/file/{c.id}-profile</span>
+            <a className="rv-sd-file" href={solutionUrl} target="_blank" rel="noreferrer">🔗 {solutionUrl.replace('https://','')}</a>
+            <span className="rv-sd-file rv-sd-file-muted">Opens in-app · nothing to download</span>
           </div>
         </div>
 
         {/* ── Sub-section 1: send to engineer for approval ── */}
         <div className="rv-sd-card">
           <div className="rv-sd-section-lbl">①  Send to engineer for approval</div>
-          <p className="rv-sd-help">Loop in an engineer to verify the technical quality before the medal is finalized.</p>
+          <p className="rv-sd-help">Loop in an engineer to verify the technical quality. They get a link to the engineering review portal — no download, the submission renders right there.</p>
           <div className="rv-sd-email-row">
             <input className="rv-input" style={{flex:1}} value={email} onChange={e=>setEmail(e.target.value)} placeholder="engineer@linkedin.com" />
             <button className={`rv-sd-send${notified?' sent':''}`} onClick={onNotify} disabled={notified}>
               {notified ? '✓ Sent' : 'Send →'}
             </button>
           </div>
-          {notified && <div className="rv-sd-sent-note">Submission sent to <strong>{email}</strong> for engineering review.</div>}
+          {notified && (
+            <div className="rv-sd-review-link">
+              <div className="rv-sd-sent-note">✓ Sent to <strong>{email}</strong>. They'll open the review portal:</div>
+              <div className="rv-sd-review-row">
+                <code className="rv-sd-review-url">{reviewUrl}</code>
+                <button className="rv-sd-review-open" onClick={() => setReviewing(true)}>Preview portal →</button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Sub-section 2: recruiter approve / deny + engineering finalize ── */}
@@ -803,6 +858,113 @@ function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, med
           {status === 'awarded' && (
             <div className="rv-sd-awarded-banner">
               {RANK_MEDALS[medalRank] || '🏅'} <strong>Medal awarded.</strong> {c.name} passed both recruiter and engineering review and now holds the {bounty.company} bounty medal.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {reviewing && (
+        <EngineeringReviewModal
+          bounty={bounty}
+          candidate={c}
+          reviewUrl={reviewUrl}
+          solutionUrl={solutionUrl}
+          canFinalize={status === 'recruiter_ok' && medalsLeft > 0}
+          onClose={() => setReviewing(false)}
+          onApprove={() => { onEngineerApprove(); setReviewing(false) }}
+          onDeny={() => { onDeny(); setReviewing(false) }}
+        />
+      )}
+    </div>
+  )
+}
+
+/* Inline, rendered preview of a submitted solution — a mock browser frame so
+   the recruiter (and engineer) see the actual work, never a download. */
+function SolutionPreview({ candidate, url }) {
+  const c = candidate
+  return (
+    <div className="rv-prev">
+      <div className="rv-prev-bar">
+        <span className="rv-prev-dot" style={{background:'#ff5f57'}}/>
+        <span className="rv-prev-dot" style={{background:'#febc2e'}}/>
+        <span className="rv-prev-dot" style={{background:'#28c840'}}/>
+        <span className="rv-prev-url">{url.replace('https://','')}</span>
+        <a className="rv-prev-open" href={url} target="_blank" rel="noreferrer">Open ↗</a>
+      </div>
+      {/* mock rendered profile-redesign deliverable */}
+      <div className="rv-prev-body">
+        <div className="rv-prev-cover"/>
+        <div className="rv-prev-row">
+          <div className="rv-prev-av" style={{background:c.avatarBg}}>{c.avatar}</div>
+          <div style={{flex:1, minWidth:0}}>
+            <div className="rv-prev-name">{c.name}</div>
+            <div className="rv-prev-sub">{c.school}</div>
+          </div>
+          <span className="rv-prev-chip">Recruiter mode</span>
+        </div>
+        <div className="rv-prev-badges-lbl">✅ Verified bounty work</div>
+        <div className="rv-prev-badges">
+          <span className="rv-prev-badge">🥇 {RECRUITER_COMPANY} · {c.score}/100</span>
+          <span className="rv-prev-badge">⏱ Solved in {c.time}</span>
+          <span className="rv-prev-badge">🎓 Verified by AI</span>
+        </div>
+        <div className="rv-prev-skeleton"><span style={{width:'92%'}}/><span style={{width:'78%'}}/><span style={{width:'85%'}}/></div>
+      </div>
+    </div>
+  )
+}
+
+/* The mock engineering-review portal the recruiter forwards to an engineer. */
+function EngineeringReviewModal({ bounty, candidate, reviewUrl, solutionUrl, canFinalize, onClose, onApprove, onDeny }) {
+  const c = candidate
+  return (
+    <div className="rv-modal-overlay" onClick={onClose}>
+      <div className="rv-modal rv-modal-wide" onClick={e => e.stopPropagation()}>
+        <div className="rv-eng-topbar">
+          <div className="rv-eng-brand">
+            <span className="rv-eng-logo">⚙️</span>
+            <div>
+              <div className="rv-eng-title">Engineering Review Portal</div>
+              <div className="rv-eng-url">{reviewUrl.replace('https://','')}</div>
+            </div>
+          </div>
+          <button className="rv-modal-x" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="rv-eng-meta">
+          <div className="rv-av" style={{background:c.avatarBg, width:42, height:42, fontSize:14}}>{c.avatar}</div>
+          <div style={{flex:1, minWidth:0}}>
+            <div className="rv-sd-name">{c.name} <span className="rv-eng-pos">· {bounty.company} {bounty.category}</span></div>
+            <div className="rv-sd-meta">
+              <span className="rv-sd-score">{c.score}<span className="rv-sd-score-sm">/100</span></span>
+              <span className="rv-time-chip">⏱ {c.time}</span>
+              <span className="rv-st-badge rv-st-pending">Awaiting engineering sign-off</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rv-eng-task">
+          <span className="rv-eng-task-lbl">Bounty task</span>
+          {bounty.desc}
+        </div>
+
+        <div className="rv-sd-section-lbl">Submitted solution</div>
+        <p className="rv-sd-solution">{c.solution}</p>
+        <SolutionPreview candidate={c} url={solutionUrl} />
+
+        <div className="rv-eng-actions">
+          {canFinalize ? (
+            <>
+              <div className="rv-eng-actions-help">As the reviewing engineer, verify the technical quality and finalize the medal.</div>
+              <div className="rv-sd-decide">
+                <button className="rv-sd-approve" onClick={onApprove}>🏅 Approve — award medal</button>
+                <button className="rv-sd-deny" onClick={onDeny}>✕ Deny submission</button>
+              </div>
+            </>
+          ) : (
+            <div className="rv-sd-pending-banner">
+              The recruiter must approve this candidate before engineering can finalize the medal.
             </div>
           )}
         </div>

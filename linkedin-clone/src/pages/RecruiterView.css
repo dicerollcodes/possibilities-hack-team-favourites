@@ -545,11 +545,91 @@
 }
 .rv-sd-help { font-size: 13px; color: #6b6b6b; line-height: 1.55; margin: 0 0 14px; }
 .rv-sd-solution { font-size: 14px; color: #1f2937; line-height: 1.65; margin: 0 0 14px; }
-.rv-sd-files { display: flex; gap: 10px; flex-wrap: wrap; }
+.rv-sd-files { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
 .rv-sd-file {
-  font-size: 12px; font-weight: 600; color: #0a66c2;
+  font-size: 12px; font-weight: 600; color: #0a66c2; text-decoration: none;
   background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 8px;
 }
+a.rv-sd-file:hover { background: #dbeafe; }
+.rv-sd-file-muted { color: #9ca3af; background: #f3f4f6; border-color: #e5e7eb; font-weight: 500; }
+.rv-sd-card .rv-sd-section-lbl { margin-top: 18px; }
+.rv-sd-card > .rv-sd-section-lbl:first-of-type { margin-top: 0; }
+
+/* live solution preview (mock browser frame) */
+.rv-prev {
+  border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;
+  background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.rv-prev-bar {
+  display: flex; align-items: center; gap: 6px;
+  background: #f3f4f6; border-bottom: 1px solid #e5e7eb; padding: 9px 12px;
+}
+.rv-prev-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.rv-prev-url {
+  margin-left: 8px; font-size: 11px; color: #6b7280; background: #fff;
+  border: 1px solid #e5e7eb; border-radius: 20px; padding: 3px 12px;
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rv-prev-open { font-size: 11px; font-weight: 700; color: #0a66c2; text-decoration: none; flex-shrink: 0; }
+.rv-prev-open:hover { text-decoration: underline; }
+.rv-prev-body { padding: 0 0 18px; }
+.rv-prev-cover { height: 56px; background: linear-gradient(120deg,#0f2744,#0a66c2); }
+.rv-prev-row { display: flex; align-items: center; gap: 12px; padding: 0 18px; margin-top: -22px; }
+.rv-prev-av {
+  width: 52px; height: 52px; border-radius: 50%; border: 3px solid #fff; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 17px;
+}
+.rv-prev-name { font-size: 15px; font-weight: 800; color: #000; margin-top: 20px; }
+.rv-prev-sub { font-size: 12px; color: #6b7280; }
+.rv-prev-chip {
+  margin-top: 20px; font-size: 10px; font-weight: 700; color: #0a66c2;
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 20px; padding: 3px 9px; flex-shrink: 0;
+}
+.rv-prev-badges-lbl { font-size: 11px; font-weight: 700; color: #047857; padding: 14px 18px 6px; }
+.rv-prev-badges { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 18px; }
+.rv-prev-badge {
+  font-size: 11px; font-weight: 700; color: #1f2937;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 5px 10px;
+}
+.rv-prev-skeleton { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 0; }
+.rv-prev-skeleton span { height: 9px; border-radius: 5px; background: linear-gradient(90deg,#eee,#f6f6f6,#eee); }
+
+/* engineer review link block under "send to engineer" */
+.rv-sd-review-link { margin-top: 12px; }
+.rv-sd-review-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.rv-sd-review-url {
+  flex: 1; min-width: 0; font-size: 12px; color: #0a66c2; background: #f0f4f8;
+  border: 1px solid #d6e4f0; border-radius: 8px; padding: 8px 12px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, Menlo, monospace;
+}
+.rv-sd-review-open {
+  background: #fff; color: #0a66c2; border: 1.5px solid #0a66c2; border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .15s;
+}
+.rv-sd-review-open:hover { background: #0a66c2; color: #fff; }
+
+/* engineering review portal modal */
+.rv-modal-wide { max-width: 620px; }
+.rv-eng-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: -24px -24px 16px; padding: 16px 24px;
+  background: #0f2744; color: #fff; border-radius: 14px 14px 0 0;
+}
+.rv-eng-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.rv-eng-logo { font-size: 24px; }
+.rv-eng-title { font-size: 15px; font-weight: 800; }
+.rv-eng-url { font-size: 11px; color: #9fc3ec; font-family: ui-monospace, Menlo, monospace; }
+.rv-eng-topbar .rv-modal-x { color: #9fc3ec; }
+.rv-eng-topbar .rv-modal-x:hover { color: #fff; }
+.rv-eng-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.rv-eng-pos { font-size: 13px; font-weight: 500; color: #6b7280; }
+.rv-eng-task {
+  background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 12px 14px; font-size: 13px; color: #374151; line-height: 1.55; margin-bottom: 16px;
+}
+.rv-eng-task-lbl { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #9ca3af; margin-bottom: 4px; letter-spacing: 0.4px; }
+.rv-eng-actions { margin-top: 18px; padding-top: 16px; border-top: 1px solid #e8e8e8; }
+.rv-eng-actions-help { font-size: 13px; color: #6b6b6b; margin-bottom: 12px; line-height: 1.5; }
 .rv-sd-email-row { display: flex; gap: 10px; align-items: stretch; }
 .rv-sd-send {
   background: #0a66c2; color: #fff; border: none; border-radius: 8px;
