@@ -27,31 +27,23 @@ const NVIDIA_KEYS = [
 // Locked badge claim wording — what the badge certifies, given AI is allowed.
 const BADGE_CLAIM = 'Produced a verified-correct solution and reasoned well about it.'
 
-// `files` is { name, content }[] — the whole repo the candidate worked in.
-async function reviewWithAI(challenge, files) {
-  const repo = files
-    .map(f => `--- ${f.name} ---\n${f.content}`)
-    .join('\n\n')
+async function reviewWithAI(challenge, submissionUrl, submissionDesc) {
+  const prompt = `You are evaluating a student's project submission for a company bounty. Grade on quality of thinking, effort, and how well they addressed the brief.
 
-  const prompt = `You are a senior software engineer evaluating a candidate's solution to a coding challenge on a hiring-signal bounty platform. AI assistance was ALLOWED while solving — grade the candidate on engineering JUDGMENT (correctness, edge-case handling, clarity, and the reasoning evident in the code), NOT on whether they typed it unaided.
-
-CHALLENGE: ${challenge.title}
 COMPANY: ${challenge.company}
-LANGUAGE: ${challenge.language}
-PROBLEM:
-${challenge.prompt}
+BOUNTY: ${challenge.title}
+BRIEF: ${challenge.description}
+CATEGORY: ${challenge.category}
 
-ACCEPTANCE CRITERIA:
-${challenge.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+STUDENT SUBMISSION:
+- Link: ${submissionUrl || '(not provided)'}
+- Description: ${submissionDesc || '(not provided)'}
 
-CANDIDATE REPOSITORY (multiple files; grade the implementation in solution.js against the tests):
-${repo}
-
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON:
 {
-  "score": <integer 0-100>,
-  "percentile": "<e.g. Top 8%>",
-  "feedback": "<2-3 sentences of specific feedback referencing their actual code and the judgment it shows>"
+  "score": <integer 70-99>,
+  "percentile": "<e.g. Top 12%>",
+  "feedback": "<2-3 sentences of specific, encouraging feedback on their approach>"
 }`
 
   for (const key of NVIDIA_KEYS) {
@@ -62,10 +54,7 @@ Respond ONLY with valid JSON in this exact format:
         body: JSON.stringify({
           model: 'qwen/qwen3-next-80b-a3b-instruct',
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.6,
-          top_p: 0.7,
-          max_tokens: 512,
-          stream: false,
+          temperature: 0.6, top_p: 0.7, max_tokens: 512, stream: false,
         }),
       })
       if (!res.ok) continue
@@ -76,17 +65,32 @@ Respond ONLY with valid JSON in this exact format:
         const parsed = JSON.parse(jsonMatch[0])
         if (parsed.score && parsed.feedback) return parsed
       }
-    } catch { /* try next key, then fall through */ }
+    } catch { /* try next key */ }
   }
-  // Cached fallback if both keys fail — the badge is still awarded.
   return {
     score: 88,
     percentile: 'Top 14%',
-    feedback: 'Correct, readable solution that handles the core cases and reads like production code. To push into the top tier, tighten the edge-case handling and make the time/space trade-off explicit.',
+    feedback: 'Strong submission that addresses the core brief well. The approach shows good product thinking and practical execution. Adding more detail on design decisions would push it further.',
   }
 }
 
-/* ── Challenge catalog (SWE-only) ── */
+const SUBMIT_TYPE_LABELS = {
+  github: 'GitHub repo + live link',
+  figma: 'Figma / Canva link',
+  excel: 'Excel, PDF, or dashboard link',
+  campaign: 'Slides or doc link',
+  dashboard: 'Dashboard link',
+  presentation: 'Presentation link',
+}
+
+const FALLBACK_BOUNTIES = [
+  { id: 'fb1', company: 'LinkedIn', companyColor: '#0a66c2', title: 'Build a Personal Brand Landing Page', category: 'Design', description: 'LinkedIn wants to help students stand out to recruiters. Design and build a single-page personal brand site for a fictional recent grad — include an above-the-fold hero, a skills section, a 2-3 project showcase, and a contact form. Use any stack you want. The goal: if a recruiter lands on this page, they should know in 10 seconds whether to reach out. Submit a live deployed link plus a 1-paragraph writeup on the design decisions you made.', submission_type: 'github', submissions_count: 34, deadline: '2026-07-15' },
+  { id: 'fb2', company: 'Canva', companyColor: '#7c2ae8', title: 'Design a "Back to Campus" Social Kit', category: 'Design', description: 'Create a 5-template social kit for a fictional student org preparing for back-to-school season — think Instagram posts, a flyer, and a story template. Templates should feel cohesive (shared color palette, fonts, vibe) but each be independently usable. Submit a shareable Canva link plus a brief style guide.', submission_type: 'figma', submissions_count: 21, deadline: '2026-07-20' },
+  { id: 'fb3', company: 'Fidelity', companyColor: '#538234', title: 'Visualize Public Retirement Savings Trends', category: 'Finance', description: 'Using only publicly available data (Fed, BLS, FRED, or similar), build a clean data dashboard or slide deck that answers: how much are 22-30 year olds saving, how does that compare to older generations, and what are the top 3 barriers? Use Excel, Python, or any BI tool.', submission_type: 'excel', submissions_count: 19, deadline: '2026-07-28' },
+  { id: 'fb4', company: 'Google', companyColor: '#4285f4', title: 'Build and Deploy a URL Shortener', category: 'Engineering', description: 'Build a working URL shortener — users paste a long URL, get a short one, click it, get redirected. Add a simple analytics view that shows total clicks per link. Deploy it publicly. Submit a live link + your GitHub repo.', submission_type: 'github', submissions_count: 12, deadline: '2026-08-05' },
+]
+
+/* ── kept only so legacy shape refs compile ── */
 const CHALLENGES = [
   {
     id: 1,
@@ -286,13 +290,15 @@ Revalidating a path must drop it and all descendants — but never siblings.
 // Funnel the demo plays for every challenge: a large pool narrowed to a
 // trustworthy top 10. The objective gate + dedup are mechanical — the AI
 // only ever scores the ~30 that survive, never the 10k raw submissions.
-function funnelStages(participants) {
+function funnelStages(count) {
+  const total = Math.max(count ?? 20, 20)
+  const reviewed = Math.max(Math.floor(total * 0.4), 8)
+  const scored = Math.min(Math.floor(reviewed * 0.4), 30)
   return [
-    { key: 'received', label: 'Submissions received',              count: participants, ai: false },
-    { key: 'tests',    label: 'Compiled & passed hidden tests',    count: 312,          ai: false },
-    { key: 'integrity',label: 'Cleared dedup & injection scrub',   count: 30,           ai: false },
-    { key: 'judged',   label: 'AI-scored on judgment',             count: 12,           ai: true  },
-    { key: 'shortlist',label: 'Top 10 — sent to recruiters',       count: 10,           ai: false },
+    { key: 'received',  label: 'Submissions received',         count: total,    ai: false },
+    { key: 'reviewed',  label: 'Passed initial quality check', count: reviewed, ai: false },
+    { key: 'judged',    label: 'AI-scored on judgment',        count: scored,   ai: true  },
+    { key: 'shortlist', label: 'Top 10 — sent to recruiters',  count: 10,       ai: false },
   ]
 }
 
@@ -319,68 +325,76 @@ const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export default function BountyPage({ onEarnBadge }) {
-  const [step, setStep] = useState('browse')   // browse | detail | solve | results | awarded
+  const [step, setStep] = useState('browse')
   const [selected, setSelected] = useState(null)
-  // Working copy of the challenge's repo: filename -> current content.
-  const [fileContents, setFileContents] = useState({})
+  const [submissionUrl, setSubmissionUrl] = useState('')
+  const [submissionDesc, setSubmissionDesc] = useState('')
   const [aiResult, setAiResult] = useState(null)
+  const [bounties, setBounties] = useState(null)
 
-  function openChallenge(c) { setSelected(c); setStep('detail') }
-  function startSolving() {
-    setFileContents(Object.fromEntries(selected.files.map(f => [f.name, f.content])))
-    setStep('solve')
-  }
-  function editFile(name, content) {
-    setFileContents(prev => ({ ...prev, [name]: content }))
-  }
-  function resetToBrowse() {
-    setStep('browse'); setSelected(null); setFileContents({}); setAiResult(null)
-  }
+  useEffect(() => {
+    supabase.from('bounties').select('*').eq('status', 'active').order('submissions_count', { ascending: false })
+      .then(({ data, error }) => {
+        if (!error && data?.length) setBounties(data.map(b => ({
+          id: b.id,
+          company: b.company,
+          companyColor: b.company_color,
+          title: b.title,
+          category: b.category,
+          description: b.description,
+          submission_type: b.submission_type,
+          submissions_count: b.submissions_count,
+          deadline: b.deadline,
+        })))
+        else setBounties(FALLBACK_BOUNTIES)
+      })
+      .catch(() => setBounties(FALLBACK_BOUNTIES))
+  }, [])
+
+  function openChallenge(c) { setSelected(c); setSubmissionUrl(''); setSubmissionDesc(''); setStep('detail') }
+  function resetToBrowse() { setStep('browse'); setSelected(null); setAiResult(null) }
 
   async function submitSolution() {
     setAiResult(null)
     setStep('results')
-    const files = selected.files.map(f => ({ name: f.name, content: fileContents[f.name] ?? f.content }))
     let result
     try {
-      result = await reviewWithAI(selected, files)
+      result = await reviewWithAI(selected, submissionUrl, submissionDesc)
     } catch {
-      result = { score: 88, percentile: 'Top 14%', feedback: 'Correct, readable solution that handles the core cases.' }
+      result = { score: 88, percentile: 'Top 14%', feedback: 'Strong submission that addresses the core brief well.' }
     }
     setAiResult(result)
-
-    // Persist to Supabase (non-blocking — demo continues regardless)
     supabase.from('submissions').insert({
-      submission_url: null,
+      submission_url: submissionUrl || null,
       ai_score: result.score,
       ai_percentile: result.percentile,
       ai_feedback: result.feedback,
     }).then(() => {}).catch(() => {})
   }
 
-  if (step === 'browse')  return <BrowseView challenges={CHALLENGES} onOpen={openChallenge} />
-  if (step === 'detail')  return <DetailView c={selected} onBack={resetToBrowse} onSolve={startSolving} />
-  if (step === 'solve')   return <SolveView c={selected} fileContents={fileContents} onEdit={editFile} onBack={() => setStep('detail')} onSubmit={submitSolution} />
+  if (step === 'browse')  return <BrowseView bounties={bounties} onOpen={openChallenge} />
+  if (step === 'detail')  return <DetailView c={selected} onBack={resetToBrowse} onSolve={() => setStep('solve')} />
+  if (step === 'solve')   return <SolveView c={selected} url={submissionUrl} desc={submissionDesc} onUrl={setSubmissionUrl} onDesc={setSubmissionDesc} onBack={() => setStep('detail')} onSubmit={submitSolution} />
   if (step === 'results') return <ResultsView c={selected} aiResult={aiResult} onContinue={() => setStep('awarded')} />
   if (step === 'awarded') return <AwardedView c={selected} aiResult={aiResult} onEarnBadge={onEarnBadge} onBack={resetToBrowse} />
   return null
 }
 
 /* ── Browse ── */
-function BrowseView({ challenges, onOpen }) {
+function BrowseView({ bounties, onOpen }) {
+  const list = bounties ?? FALLBACK_BOUNTIES
   return (
     <div className="bounty-page">
       <div className="bounty-hero">
         <div className="bounty-hero-inner">
           <div className="bounty-hero-badge"><IconTarget size={13} /> LINKEDIN BOUNTIES</div>
-          <h1 className="bounty-hero-title">Proof-of-work beats a resume.</h1>
+          <h1 className="bounty-hero-title">Real work. Verified results.</h1>
           <p className="bounty-hero-sub">
-            Companies post a real-shaped, objectively gradeable challenge. Solve it and earn a
-            verified, company-tied badge on your profile — exactly where recruiters already search.
-            AI is allowed; you're graded on judgment, not unaided typing.
+            Companies post practical projects that give you real experience and something to show for it.
+            Complete one, get your submission AI-reviewed, and earn a verified company badge on your profile.
           </p>
           <div className="bounty-flow-steps">
-            {['Pick a challenge', 'Solve in-browser', 'Pass the objective gate', 'AI scores judgment', 'Verified badge'].map((s, i, arr) => (
+            {['Pick a bounty', 'Do the work', 'Submit your link', 'AI scores it', 'Verified badge'].map((s, i, arr) => (
               <span key={s} className="bflow">
                 <span className="bflow-dot">{i + 1}</span>
                 <span className="bflow-lbl">{s}</span>
@@ -393,24 +407,24 @@ function BrowseView({ challenges, onOpen }) {
 
       <div className="bounty-content">
         <div className="bounty-section-hdr">
-          <span className="bounty-section-label">Open Challenges</span>
-          <span className="bounty-count">{challenges.length} available · SWE</span>
+          <span className="bounty-section-label">Open Bounties</span>
+          <span className="bounty-count">{list.length} available</span>
         </div>
         <div className="bounty-list">
-          {challenges.map(c => (
+          {list.map(c => (
             <div className="bl-card" key={c.id} onClick={() => onOpen(c)}>
               <div className="bl-left">
-                <div className="bl-logo" style={{ background: c.companyColor }}>{c.companyLogo}</div>
+                <div className="bl-logo" style={{ background: c.companyColor }}>{c.company[0]}</div>
                 <div className="bl-info">
                   <div className="bl-company-row">
                     <span className="bl-company">{c.company}</span>
-                    <span className="bl-backlog"><IconCode size={11} /> {c.language}</span>
+                    <span className="bl-backlog"><IconCode size={11} /> {c.category}</span>
                   </div>
                   <div className="bl-title">{c.title}</div>
                   <div className="bl-meta-row">
-                    <span className="bl-deadline-pill"><IconClock size={11} /> {c.deadline} left</span>
-                    <span className="bl-participants"><IconUsers size={11} /> {c.participants.toLocaleString()} solving</span>
-                    <span className="bl-diff">{c.difficulty}</span>
+                    <span className="bl-deadline-pill"><IconClock size={11} /> Due {c.deadline ? new Date(c.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}</span>
+                    <span className="bl-participants"><IconUsers size={11} /> {(c.submissions_count ?? 0).toLocaleString()} submitted</span>
+                    <span className="bl-diff">{SUBMIT_TYPE_LABELS[c.submission_type] ?? c.submission_type}</span>
                   </div>
                 </div>
               </div>
@@ -419,9 +433,9 @@ function BrowseView({ challenges, onOpen }) {
                   <IconShieldCheck size={26} />
                   <span>Verified {c.company} badge</span>
                 </div>
-                <div className="bl-reward-lbl">Earned by everyone who passes</div>
+                <div className="bl-reward-lbl">Earned by everyone who submits</div>
                 <button className="bl-open-btn" onClick={(e) => { e.stopPropagation(); onOpen(c) }}>
-                  View challenge <IconChevronRight size={15} />
+                  View bounty <IconChevronRight size={15} />
                 </button>
               </div>
             </div>
@@ -434,6 +448,7 @@ function BrowseView({ challenges, onOpen }) {
 
 /* ── Detail ── */
 function DetailView({ c, onBack, onSolve }) {
+  const deadline = c.deadline ? new Date(c.deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
   return (
     <div className="bounty-page">
       <div className="bd-back-bar">
@@ -442,10 +457,10 @@ function DetailView({ c, onBack, onSolve }) {
 
       <div className="bd-wrap">
         <div className="bd-header" style={{ borderTop: `4px solid ${c.companyColor}` }}>
-          <div className="bd-logo" style={{ background: c.companyColor }}>{c.companyLogo}</div>
+          <div className="bd-logo" style={{ background: c.companyColor }}>{c.company[0]}</div>
           <div>
             <div className="bd-company">{c.company}</div>
-            <div className="bd-backlog-tag"><IconCode size={12} /> {c.language} · {c.difficulty}</div>
+            <div className="bd-backlog-tag"><IconCode size={12} /> {c.category} · {SUBMIT_TYPE_LABELS[c.submission_type] ?? c.submission_type}</div>
           </div>
         </div>
 
@@ -456,29 +471,33 @@ function DetailView({ c, onBack, onSolve }) {
             <div className="bd-stat-num bd-stat-badge" style={{ color: c.companyColor }}>
               <IconShieldCheck size={20} /> Verified badge
             </div>
-            <div className="bd-stat-lbl">For everyone who passes</div>
+            <div className="bd-stat-lbl">For everyone who submits</div>
           </div>
           <div className="bd-stat-div" />
           <div className="bd-stat">
-            <div className="bd-stat-num">{c.deadline}</div>
-            <div className="bd-stat-lbl">Time left</div>
+            <div className="bd-stat-num" style={{ fontSize: 16 }}>{deadline}</div>
+            <div className="bd-stat-lbl">Deadline</div>
           </div>
           <div className="bd-stat-div" />
           <div className="bd-stat">
-            <div className="bd-stat-num">{c.participants.toLocaleString()}</div>
-            <div className="bd-stat-lbl">Solving now</div>
+            <div className="bd-stat-num">{(c.submissions_count ?? 0).toLocaleString()}</div>
+            <div className="bd-stat-lbl">Submitted</div>
           </div>
         </div>
 
         <div className="bd-section">
-          <div className="bd-section-label">The problem</div>
-          <p className="bd-text">{c.prompt}</p>
+          <div className="bd-section-label">The brief</div>
+          <p className="bd-text">{c.description}</p>
         </div>
 
         <div className="bd-section">
-          <div className="bd-section-label">What passing means</div>
+          <div className="bd-section-label">What we're looking for</div>
           <ul className="bd-criteria">
-            {c.acceptanceCriteria.map((crit, i) => (
+            {[
+              'Clear, practical output that addresses the brief',
+              'Evidence of your own thinking — not just a template',
+              'A short writeup explaining your decisions',
+            ].map((crit, i) => (
               <li key={i} className="bd-criterion">
                 <span className="bd-check" style={{ background: c.companyColor }}><IconCheck size={10} strokeWidth={3} /></span>
                 {crit}
@@ -494,130 +513,88 @@ function DetailView({ c, onBack, onSolve }) {
               <IconShieldCheck size={18} />
             </span>
             <span className="bd-submit-lbl">
-              Clear the hidden-test gate and everyone earns a verified {c.company} badge on their profile.
-              The top 10 also land on {c.company}'s recruiter shortlist with a warm intro.
+              Submit your work link and a short description. LinkedIn Bounty AI reviews it and scores your judgment.
+              Everyone who submits earns a verified {c.company} badge. Top 10 get a warm intro to {c.company}'s recruiters.
             </span>
           </div>
         </div>
 
         <button className="bd-start-btn" style={{ background: c.companyColor }} onClick={onSolve}>
-          Solve this challenge <IconChevronRight size={16} />
+          Submit my work <IconChevronRight size={16} />
         </button>
       </div>
     </div>
   )
 }
 
-/* ── Solve (full-width multi-file sandbox) ── */
-function SolveView({ c, fileContents, onEdit, onBack, onSubmit }) {
-  const [activeName, setActiveName] = useState(() => {
-    const firstEditable = c.files.find(f => f.editable) ?? c.files[0]
-    return firstEditable.name
-  })
-  const activeFile = c.files.find(f => f.name === activeName) ?? c.files[0]
-  const activeContent = fileContents[activeName] ?? activeFile.content
-
-  // Submit once any editable file has been changed beyond its starter.
-  const canSubmit = c.files.some(f =>
-    f.editable && (fileContents[f.name] ?? f.content).trim() !== f.content.trim()
-  )
-
+/* ── Solve (project submission form) ── */
+function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
+  const canSubmit = url.trim().length > 0 && desc.trim().length > 10
   return (
-    <div className="solve-screen">
-      <div className="solve-topbar">
-        <button className="bd-back-btn" onClick={onBack}><IconArrowLeft size={16} /> Exit sandbox</button>
-        <div className="solve-topbar-mid">
-          <span className="solve-co-dot" style={{ background: c.companyColor }}>{c.companyLogo}</span>
-          <span className="solve-co-title">{c.company} · {c.title}</span>
-        </div>
-        <span className="solve-lang"><IconCode size={13} /> {c.language}</span>
+    <div className="bounty-page">
+      <div className="bd-back-bar">
+        <button className="bd-back-btn" onClick={onBack}><IconArrowLeft size={16} /> Back to brief</button>
       </div>
-
-      <div className="solve-panes">
-        <div className="solve-left">
-          <div className="bd-section-label">The problem</div>
-          <p className="solve-prompt">{c.prompt}</p>
-
-          <div className="bd-section-label" style={{ marginTop: 22 }}>Acceptance criteria</div>
-          <ul className="bd-criteria">
-            {c.acceptanceCriteria.map((crit, i) => (
-              <li key={i} className="bd-criterion">
-                <span className="bd-check" style={{ background: c.companyColor }}><IconCheck size={10} strokeWidth={3} /></span>
-                {crit}
-              </li>
-            ))}
-          </ul>
-
-          <div className="solve-hidden-note">
-            <IconShieldCheck size={15} />
-            Hidden tests grade correctness objectively. Pass them and your badge is verified.
+      <div className="bd-wrap">
+        <div className="bd-header" style={{ borderTop: `4px solid ${c.companyColor}` }}>
+          <div className="bd-logo" style={{ background: c.companyColor }}>{c.company[0]}</div>
+          <div>
+            <div className="bd-company">{c.company}</div>
+            <div className="bd-backlog-tag">{c.title}</div>
           </div>
         </div>
 
-        <div className="solve-ide">
-          {/* File tree */}
-          <div className="solve-tree">
-            <div className="solve-tree-hdr"><IconFolder size={14} /> {c.repoName ?? `${c.company.toLowerCase()}-bounty`}</div>
-            {c.files.map(f => (
-              <button
-                key={f.name}
-                className={`solve-tree-file${f.name === activeName ? ' active' : ''}`}
-                onClick={() => setActiveName(f.name)}
-              >
-                <FileGlyph lang={f.lang} />
-                <span className="solve-tree-name">{f.name}</span>
-                {!f.editable && <IconLock size={11} className="solve-tree-lock" />}
-              </button>
-            ))}
-          </div>
+        <h2 className="bd-title">Submit your work</h2>
+        <p className="bd-text" style={{ marginBottom: 28 }}>
+          Paste your link and describe what you built. LinkedIn Bounty AI will review it and score your judgment.
+          Everyone who submits earns a verified badge — no pass/fail gate.
+        </p>
 
-          {/* Editor */}
-          <div className="solve-right">
-            <div className="solve-editor-hdr">
-              <span className="solve-dot r" /><span className="solve-dot y" /><span className="solve-dot g" />
-              <span className="solve-editor-file">
-                {activeFile.name}
-                {!activeFile.editable && <span className="solve-readonly-tag"><IconLock size={10} /> read-only</span>}
-              </span>
-            </div>
-            <textarea
-              className="solve-editor"
-              value={activeContent}
-              onChange={e => onEdit(activeName, e.target.value)}
-              readOnly={!activeFile.editable}
-              spellCheck={false}
-              aria-label={`${activeFile.name} editor`}
-            />
+        <div className="bd-section">
+          <div className="bd-section-label">
+            {SUBMIT_TYPE_LABELS[c.submission_type] ?? 'Submission link'} <span style={{ color: '#e03e2d' }}>*</span>
           </div>
+          <input
+            className="rv-input"
+            style={{ width: '100%', marginTop: 8, fontSize: 15 }}
+            placeholder={c.submission_type === 'github' ? 'https://github.com/you/project' : 'https://...'}
+            value={url}
+            onChange={e => onUrl(e.target.value)}
+          />
         </div>
-      </div>
 
-      <div className="solve-bottombar">
-        <span className="solve-ai-note">
-          <IconSparkles size={15} /> AI is allowed — you're judged on judgment, not unaided typing.
-        </span>
+        <div className="bd-section" style={{ marginTop: 20 }}>
+          <div className="bd-section-label">Describe your approach <span style={{ color: '#e03e2d' }}>*</span></div>
+          <textarea
+            className="rv-textarea"
+            style={{ width: '100%', marginTop: 8, minHeight: 120, fontSize: 15 }}
+            placeholder="What did you build? What decisions did you make and why? What would you do differently?"
+            value={desc}
+            onChange={e => onDesc(e.target.value)}
+          />
+        </div>
+
+        <div className="solve-hidden-note" style={{ marginTop: 16 }}>
+          <IconSparkles size={15} />
+          AI reviews your submission and scores your thinking — not just the output.
+        </div>
+
         <button
-          className="solve-submit-btn"
-          style={{ background: canSubmit ? c.companyColor : '#c8c8c8', cursor: canSubmit ? 'pointer' : 'not-allowed' }}
+          className="bd-start-btn"
+          style={{ background: canSubmit ? c.companyColor : '#c8c8c8', cursor: canSubmit ? 'pointer' : 'not-allowed', marginTop: 24 }}
           disabled={!canSubmit}
           onClick={onSubmit}
         >
-          Submit solution <IconBolt size={16} />
+          Submit for AI review <IconBolt size={16} />
         </button>
       </div>
     </div>
   )
-}
-
-function FileGlyph({ lang }) {
-  const map = { js: { t: 'JS', c: '#f7df1e', f: '#000' }, ts: { t: 'TS', c: '#3178c6', f: '#fff' }, md: { t: 'MD', c: '#6b6b6b', f: '#fff' } }
-  const g = map[lang] ?? map.md
-  return <span className="solve-file-glyph" style={{ background: g.c, color: g.f }}>{g.t}</span>
 }
 
 /* ── Results (funnel + top 10) ── */
 function ResultsView({ c, aiResult, onContinue }) {
-  const stages = funnelStages(c.participants)
+  const stages = funnelStages(c.submissions_count)
   const reduced = prefersReducedMotion()
   // How many stages are revealed; the AI stage (index 3) waits for the live call.
   const [revealed, setRevealed] = useState(reduced ? 3 : 0)
@@ -766,7 +743,7 @@ function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
           <div className="ba-badge-logo" style={{ background: c.companyColor }}>{c.companyLogo}</div>
           <div className="ba-badge-info">
             <div className="ba-badge-name">{c.company} Bounty · {c.title}</div>
-            <div className="ba-badge-meta">Score {score}/100 · {percentile} · {c.language}</div>
+            <div className="ba-badge-meta">Score {score}/100 · {percentile} · {c.category}</div>
             <div className="ba-verified">
               <IconShieldCheck size={11} strokeWidth={3} /> Verified by LinkedIn Bounty
             </div>
