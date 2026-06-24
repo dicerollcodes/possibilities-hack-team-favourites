@@ -3,8 +3,12 @@ import {
   IconCheck, IconArrowLeft, IconChevronRight, IconSparkles,
   IconClock, IconUsers, IconShieldCheck, IconCode, IconBolt, IconTarget,
   IconFolder, IconLock, IconUpload, IconX, IconFile,
+  IconSend, IconRefresh, IconMessageChatbot, IconEye,
 } from '@tabler/icons-react'
+import Editor from '@monaco-editor/react'
 import { supabase } from '../lib/supabase'
+import { LI_RACE_BOUNTY_ID, REVIEW_STATUS } from '../lib/demoUser'
+import { runReviewPipeline } from '../lib/aiPipeline'
 
 /* ──────────────────────────────────────────────
    LinkedIn Bounties — proof-of-work for hiring.
@@ -18,6 +22,68 @@ const GROQ_KEY = import.meta.env.VITE_GROQ_KEY
 
 // Locked badge claim wording — what the badge certifies, given AI is allowed.
 const BADGE_CLAIM = 'Produced a verified-correct solution and reasoned well about it.'
+
+/* ── In-editor AI Assistant (chat → Groq) ──
+   The IDE has a chat panel: the candidate prompts the assistant for help and it
+   answers with the current files as context — explain the bug, suggest a fix,
+   review the code, etc. Runs fully client-side against Groq's OpenAI-compatible
+   endpoint. No backend. If the key is missing or the call fails, the panel says
+   so and the rest of the IDE keeps working. AI is allowed — judgment is graded. */
+const AI_ENABLED = !!GROQ_KEY
+
+// Monaco language ids for our starter-file extensions.
+const MONACO_LANG = { html: 'html', js: 'javascript', css: 'css', md: 'markdown' }
+
+// Send a chat turn to Groq with the sandbox files as context. `history` is the
+// prior [{role,content}] turns; returns the assistant's reply text (or null).
+async function askAssistant({ challenge, files, fileContents, history, userText }) {
+  const code = files
+    .map(f => `--- ${f.name}${f.editable ? '' : ' (read-only)'} ---\n${fileContents[f.name] ?? f.content}`)
+    .join('\n\n')
+  const system = `You are a senior ${challenge?.company || 'software'} engineer pair-programming with a candidate inside an in-browser IDE.
+They are working on this ticket: "${challenge?.title || 'coding bounty'}".
+${challenge?.description ? 'Ticket details: ' + challenge.description.slice(0, 600) : ''}
+
+You can see all of their files below. Help them: explain the bug, propose fixes, review their code, answer questions. Be concise and concrete — reference their actual code (file names, function names). When you give code, use fenced \`\`\` blocks. Do not pretend to run the code.
+
+THEIR CURRENT FILES:
+${code.slice(0, 6000)}`
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: system },
+          ...history.slice(-6),
+          { role: 'user', content: userText },
+        ],
+        temperature: 0.4, max_tokens: 700,
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content?.trim() || null
+  } catch {
+    return null
+  }
+}
+
+// Assemble a self-contained preview document from the sandbox files: inline the
+// CSS into <head> and inline each `<script src="x.js">` in document order. This
+// is generic — it works whether the project has one JS file or several.
+function buildPreviewDoc(files, fileContents) {
+  const get = (n) => fileContents[n] ?? files.find(f => f.name === n)?.content ?? ''
+  let html = get('index.html')
+  const cssText = files.filter(f => f.lang === 'css').map(f => get(f.name)).join('\n')
+  if (cssText) html = html.replace('</head>', `<style>${cssText}</style></head>`)
+  html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, src) => {
+    const js = get(src)
+    return js ? `<script>${js}</script>` : m
+  })
+  return html
+}
 
 async function callAI(prompt) {
   try {
@@ -82,8 +148,12 @@ const SUBMIT_TYPE_LABELS = {
   presentation: 'Presentation link',
 }
 
-/* ── Starter files for the coding sandbox ── */
-const PAGESPEED_FILES = [
+/* ── Starter files for the coding sandbox ──
+   A real LinkedIn engineering ticket, not an interview puzzle: the location
+   type-ahead has an out-of-order async race. The starter code already
+   "works" — but typing fast surfaces a genuine, reproducible bug in the
+   live preview. The candidate has to diagnose and fix it. */
+const SEARCH_RACE_FILES = [
   {
     name: 'index.html', lang: 'html', editable: true,
     content: `<!DOCTYPE html>
@@ -91,42 +161,79 @@ const PAGESPEED_FILES = [
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PageSpeed Report Card</title>
+  <title>City Search</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
-    <h1>PageSpeed Report Card</h1>
-    <p class="subtitle">Paste any URL and get a plain-English performance breakdown.</p>
-    <div class="input-row">
-      <input type="text" id="url-input" placeholder="https://example.com" />
-      <button onclick="analyze()">Analyze →</button>
-    </div>
-    <div id="results" class="results hidden"></div>
+    <h1>Find a city</h1>
+    <p class="subtitle">Start typing — results update as you go.</p>
+    <input type="text" id="q" autocomplete="off" placeholder="Try typing 'london' quickly…" />
+    <ul id="results" class="results"></ul>
+    <p class="status" id="status"></p>
   </div>
+  <script src="api.js"></script>
   <script src="app.js"></script>
 </body>
 </html>`,
   },
   {
     name: 'app.js', lang: 'js', editable: true,
-    content: `// TODO: implement analyze()
-// API: https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={URL}&strategy=mobile
-// No API key needed for basic usage (rate-limited).
-// Fetch both mobile + desktop, then render into #results.
+    content: `// City type-ahead. Talks to the mock search API in api.js.
+//
+// ⚠️  KNOWN BUG (this is the ticket): type "london" quickly and the list
+//     ends up showing every city that starts with "l" — Los Angeles, Lagos,
+//     Lima… — instead of just London. The results don't match what's in the
+//     box. Slow, deliberate typing looks fine; fast typing breaks it.
+//
+// Your job: make the rendered results ALWAYS match the current input.
+// Using docs, MDN, or AI assistance is fine — we grade the fix and your
+// reasoning, not whether you memorized it.
 
-async function analyze() {
-  const raw = document.getElementById('url-input').value.trim()
-  if (!raw) return
-  const url = raw.startsWith('http') ? raw : 'https://' + raw
+const input  = document.getElementById('q')
+const list   = document.getElementById('results')
+const status = document.getElementById('status')
 
-  const results = document.getElementById('results')
-  results.classList.remove('hidden')
-  results.innerHTML = '<p class="loading">Analyzing — this takes ~5 seconds...</p>'
+input.addEventListener('input', async (e) => {
+  const query = e.target.value.trim()
+  if (!query) { list.innerHTML = ''; status.textContent = ''; return }
 
-  // Your code here
-  // Hint: fetch mobile score, desktop score, LCP, CLS, and top 3 audit opportunities.
-  // Render them using the CSS classes already defined in style.css.
+  status.textContent = 'Searching…'
+  const results = await searchCities(query)   // ⚠️ responses can arrive out of order
+  render(query, results)
+})
+
+function render(query, results) {
+  status.textContent = ''
+  list.innerHTML = results.length
+    ? results.map(c => '<li>' + c + '</li>').join('')
+    : '<li class="empty">No cities match "' + query + '"</li>'
+}`,
+  },
+  {
+    name: 'api.js', lang: 'js', editable: false,
+    content: `// Mock search backend — DO NOT EDIT. This stands in for a real network API.
+// Latency is intentionally variable: shorter queries take LONGER to come back
+// (think uncached, broad result sets), so responses for earlier keystrokes can
+// land after later ones — exactly like a real autocomplete endpoint under load.
+
+const CITIES = [
+  'London', 'Los Angeles', 'Lagos', 'Lima', 'Lisbon', 'Lyon', 'Lahore',
+  'Paris', 'Prague', 'Porto', 'Portland',
+  'Tokyo', 'Toronto', 'Tehran', 'Taipei',
+  'Berlin', 'Bogotá', 'Boston', 'Bangkok',
+]
+
+// Returns a Promise of the cities whose name starts with the query.
+function searchCities(query) {
+  const q = query.toLowerCase()
+  // Shorter query => slower response. "l" is the slowest, "london" the fastest.
+  const latency = Math.max(120, 640 - query.length * 90) + Math.random() * 80
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(CITIES.filter(c => c.toLowerCase().startsWith(q)))
+    }, latency)
+  })
 }`,
   },
   {
@@ -136,74 +243,63 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: #f8f9fa; color: #1a1a1a; padding: 40px 20px;
 }
-.container { max-width: 680px; margin: 0 auto; }
+.container { max-width: 560px; margin: 0 auto; }
 h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
 .subtitle { color: #666; margin-bottom: 22px; font-size: 14px; }
 
-.input-row { display: flex; gap: 10px; margin-bottom: 24px; }
-input {
-  flex: 1; padding: 11px 14px; border: 2px solid #e0e0e0;
-  border-radius: 8px; font-size: 15px; outline: none;
+#q {
+  width: 100%; padding: 12px 16px; border: 2px solid #e0e0e0;
+  border-radius: 10px; font-size: 16px; outline: none;
 }
-input:focus { border-color: #4285f4; }
-button {
-  padding: 11px 20px; background: #4285f4; color: #fff;
-  border: none; border-radius: 8px; font-size: 15px; cursor: pointer; white-space: nowrap;
+#q:focus { border-color: #0a66c2; }
+
+.results { list-style: none; margin-top: 14px; }
+.results li {
+  background: #fff; border: 1px solid #eee; border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 8px; font-size: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
 }
-button:hover { background: #3367d6; }
-
-.results { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
-.hidden { display: none; }
-.loading { color: #666; font-size: 14px; }
-
-/* Score grid */
-.score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
-.score-card { text-align: center; padding: 18px; border-radius: 10px; background: #f8f9fa; }
-.score-num { font-size: 40px; font-weight: 800; }
-.score-lbl { font-size: 12px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
-.good { color: #0cce6b; } .ok { color: #ffa400; } .poor { color: #ff4e42; }
-
-/* Vitals */
-.vitals { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.vital { flex: 1; min-width: 120px; background: #f8f9fa; border-radius: 8px; padding: 12px; }
-.vital-val { font-size: 20px; font-weight: 700; }
-.vital-lbl { font-size: 11px; color: #888; margin-top: 2px; }
-
-/* Issues */
-.issues-title { font-size: 13px; font-weight: 600; color: #444; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .4px; }
-.issue { padding: 10px 12px; border-left: 3px solid #ffa400; background: #fff9f0; border-radius: 4px; margin-bottom: 8px; font-size: 14px; line-height: 1.5; }`,
+.results li.empty { color: #999; background: #fafafa; box-shadow: none; }
+.status { color: #888; font-size: 13px; margin-top: 10px; min-height: 18px; }`,
   },
   {
     name: 'README.md', lang: 'md', editable: false,
-    content: `# PageSpeed Report Card — Google Bounty
+    content: `# Bug: city search shows results for the wrong query — LinkedIn
 
-## What to build
-A tool where a user pastes any URL and gets a clean, plain-English
-performance report: mobile score, desktop score, Core Web Vitals, and
-the top 3 issues explained without jargon.
+## Ticket
+> Filed by: Search UX · Priority: P2
+>
+> Our city type-ahead occasionally shows results that don't match what's in
+> the box. Repro: type **"london"** quickly. Instead of just *London*, the
+> list shows *Los Angeles, Lagos, Lima…* — every city starting with "l".
+> Typing slowly looks fine. Customers think search is broken.
 
-## The API (no key needed)
-\`\`\`
-GET https://www.googleapis.com/pagespeedonline/v5/runPagespeed
-  ?url=https://example.com
-  &strategy=mobile   # or desktop
-\`\`\`
-Key paths in the response:
-- \`lighthouseResult.categories.performance.score\` × 100 = score
-- \`lighthouseResult.audits['largest-contentful-paint'].displayValue\`
-- \`lighthouseResult.audits['cumulative-layout-shift'].displayValue\`
-- \`lighthouseResult.audits['total-blocking-time'].displayValue\`
-- \`lighthouseResult.audits[id].details.type === 'opportunity'\` → top issues
+## Repro in the preview
+1. Hit **▶ Run Preview**.
+2. Type \`london\` as fast as you can in the search box.
+3. Watch the final list settle on the wrong (shorter-prefix) results.
+
+## What's going on
+\`api.js\` simulates a real network: shorter queries are *slower*, so the
+response for an earlier keystroke can arrive **after** a later one and
+overwrite the correct, fresh results. This is the classic autocomplete
+**race condition**.
+
+## Your task
+Make the rendered results **always** match the current input — no stale
+flicker, no wrong final state. Don't edit \`api.js\` (you can't change the
+backend's latency in the real world). A good fix also avoids firing a request
+on every single keystroke.
 
 ## Files
-- \`index.html\` — structure (edit freely)
-- \`app.js\`     — your implementation goes here
-- \`style.css\`  — styles ready to use, edit as needed
-- \`README.md\`  — this file (read-only)
+- \`index.html\` — markup (edit freely)
+- \`app.js\`     — the buggy search box — **fix this**
+- \`api.js\`     — mock backend (read-only — treat as the real API)
+- \`style.css\`  — styles, edit as needed
 
 ## What we evaluate
-Does it work on any URL? Is the output readable to a non-engineer?
-Is the code clean enough to hand off?`,
+Does the final result always match the input? Are out-of-order responses
+handled (not just hidden by luck)? Is the fix clean and well-reasoned?`,
   },
 ]
 
@@ -211,7 +307,7 @@ const FALLBACK_BOUNTIES = [
   { id: 'fb1', company: 'LinkedIn', companyColor: '#0a66c2', title: 'New Grad Profile Gap Analysis', category: 'Research / Data', description: 'We keep seeing that new grad profiles get significantly fewer recruiter views than profiles with 2+ years of experience — even when the listed skills match the job requirements. Pull publicly available data from LinkedIn job postings for entry-level roles in 2-3 fields, sample 20-30 public new grad profiles, and compare what skills they list vs. what postings require. Produce a gap report: which skills appear in 5+ job postings but are underrepresented on new grad profiles? Deliverable: a clean PDF or slide deck with your methodology, top 10 skill gaps ranked by frequency, and 2-3 recommendations for how LinkedIn could help students close them.', submission_type: 'presentation', submissions_count: 34, submission_cap: 75, deadline: '2026-07-15' },
   { id: 'fb2', company: 'Canva', companyColor: '#7c2ae8', title: 'Template Discovery UX Audit', category: 'UX Research', description: 'Our template search has a real problem: search "birthday card" and you get 400 results with no meaningful sorting. Do a thorough UX audit of template search and discovery across 3 competitors — Adobe Express, Microsoft Designer, and Visme. Document the patterns: how do they handle search, filtering, sorting, previewing? Produce 3 specific, actionable recommendations for Canva. Deliverable: a slide deck or Figma document with screenshots, your analysis, and ranked recommendations. This goes directly to our product team.', submission_type: 'figma', submissions_count: 21, submission_cap: 60, deadline: '2026-07-20' },
   { id: 'fb3', company: 'Fidelity', companyColor: '#538234', title: 'Competitor Investing Onboarding Teardown', category: 'Product Research', description: 'We are redesigning onboarding for first-time investors aged 22-30. Sign up as a new user on Robinhood, Acorns, and Betterment (free tiers only). Document the full flows with screenshots: what do they ask, in what order, what copy do they use, where do they introduce risk? Then produce a teardown: what is each app doing well, what are they doing poorly, and what are the top 3 things Fidelity should borrow or deliberately avoid? Deliverable: a structured report our product team can use directly in our redesign sprint.', submission_type: 'presentation', submissions_count: 19, submission_cap: 50, deadline: '2026-07-28' },
-  { id: 'fb4', company: 'Google', companyColor: '#4285f4', title: 'PageSpeed Report Card Tool', category: 'Engineering', description: 'The PageSpeed Insights API is public and free but the raw JSON is unreadable. Build a tool where a user pastes any URL and gets a clean report card: Core Web Vitals (LCP, CLS, FID), mobile vs. desktop score, and the top 3 issues in plain English. Deploy it publicly. This is a real internal utility on our backlog for developer relations. We evaluate: does it work on any URL, is the output readable to a non-engineer, is the code clean enough to hand off? Submit your live URL and GitHub repo.', submission_type: 'github', submissions_count: 12, submission_cap: 100, deadline: '2026-08-05' },
+  { id: LI_RACE_BOUNTY_ID, company: 'LinkedIn', companyColor: '#0a66c2', title: 'Fix the city-search race condition', category: 'Engineering', description: 'A real bug from our Search UX backlog. Our location type-ahead shows results that don\'t match the search box: type "london" quickly and the list ends up showing Los Angeles, Lagos, Lima — every city starting with "l" — instead of London. The cause is a classic autocomplete race: shorter queries come back slower, so an earlier keystroke\'s response lands after a later one and overwrites the correct results. You get the live, reproducible bug in an in-browser IDE. Diagnose it, fix app.js so the rendered results always match the current input (no stale flicker), and ideally avoid hammering the API on every keystroke. AI assistance and docs are allowed. Top 10 submissions go to a recruiter and an engineer for review before the verified badge is awarded.', submission_type: 'github', submissions_count: 12, submission_cap: 100, deadline: '2026-08-05' },
 ]
 
 /* ── kept only so legacy shape refs compile ── */
@@ -451,7 +547,7 @@ const prefersReducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function starterFiles(bounty) {
-  if (bounty?.submission_type === 'github') return PAGESPEED_FILES
+  if (bounty?.submission_type === 'github') return SEARCH_RACE_FILES
   return null
 }
 
@@ -496,26 +592,10 @@ export default function BountyPage({ onEarnBadge }) {
       if (isCoding) {
         const codeFiles = starterFiles(selected).map(f => ({ name: f.name, content: fileContents[f.name] ?? f.content }))
         const repo = codeFiles.filter(f => f.name !== 'README.md').map(f => `--- ${f.name} ---\n${f.content}`).join('\n\n')
-        const prompt = `You are a senior ${selected.company} engineer reviewing a student's code submission.
-
-BOUNTY: "${selected.title}"
-BRIEF: ${selected.description.slice(0, 300)}
-
-SUBMITTED CODE:
-${repo.slice(0, 2500)}
-
-Write feedback that references specific parts of their code — function names, logic choices, or what they actually implemented. Do NOT give generic advice. Mention at least one specific thing they wrote.
-
-Return JSON only:
-{"score":<integer 60-99>,"percentile":"<e.g. Top 15%>","feedback":"<2-3 sentences citing specific parts of their code>"}`
-        result = await callAI(prompt)
-        result = result ?? {
-          score: 82,
-          percentile: 'Top 18%',
-          feedback: `Code reviewed for the ${selected.company} "${selected.title}" bounty. The AI reviewer is temporarily unavailable — your badge has been awarded based on submission quality.`,
-        }
+        result = await runReviewPipeline(selected, repo, true, REFERENCE_SOLUTION)
       } else {
-        result = await reviewWithAI(selected, submissionUrl, submissionDesc)
+        const submission = [submissionUrl, submissionDesc].filter(Boolean).join('\n')
+        result = await runReviewPipeline(selected, submission, false)
       }
     } catch (e) { console.warn('submitSolution error', e) }
     setAiResult(result)
@@ -529,6 +609,10 @@ Return JSON only:
   if (step === 'detail')  return <DetailView c={selected} onBack={resetToBrowse} onSolve={() => setStep('solve')} />
   if (step === 'solve' && isCoding) return <CodingSolveView c={selected} files={starterFiles(selected)} fileContents={fileContents} onEdit={(n,v) => setFileContents(p => ({...p,[n]:v}))} onBack={() => setStep('detail')} onSubmit={submitSolution} />
   if (step === 'solve')   return <SolveView c={selected} url={submissionUrl} desc={submissionDesc} onUrl={setSubmissionUrl} onDesc={setSubmissionDesc} onBack={() => setStep('detail')} onSubmit={submitSolution} />
+  // Coding bounty: no score is ever shown to the candidate. We pre-screen with
+  // the AI only to gate the top 10, then hand off to recruiter + engineer review.
+  if (step === 'results' && isCoding) return <CodingReviewView c={selected} aiResult={aiResult} onEarnBadge={onEarnBadge} onBack={resetToBrowse} />
+  // Project bounties keep the original score → claim-badge flow.
   if (step === 'results') return <ResultsView c={selected} aiResult={aiResult} onContinue={() => setStep('awarded')} />
   if (step === 'awarded') return <AwardedView c={selected} aiResult={aiResult} onEarnBadge={onEarnBadge} onBack={resetToBrowse} />
   return null
@@ -686,89 +770,78 @@ function DetailView({ c, onBack, onSolve }) {
 
 /* ── Solve (project submission form) ── */
 /* ── Coding Sandbox ── */
-const DEMO_SOLUTION = {
-  'app.js': `async function analyze() {
-  const raw = document.getElementById('url-input').value.trim()
-  if (!raw) return
-  const url = raw.startsWith('http') ? raw : 'https://' + raw
+// Canonical reference fix for the city-search race: debounce the input, then
+// guard each response with a monotonically increasing request id so a stale
+// (earlier, slower) response can never overwrite the current query's results.
+// This is NEVER shown to the candidate — it is given only to the AI grader so
+// it can compare their submission against a known-correct solution.
+const REFERENCE_SOLUTION = {
+  'app.js': `// Fixed: debounce input + drop out-of-order (stale) responses.
 
-  const results = document.getElementById('results')
-  results.classList.remove('hidden')
-  results.innerHTML = '<p class="loading">Analyzing — this takes ~5 seconds...</p>'
+const input  = document.getElementById('q')
+const list   = document.getElementById('results')
+const status = document.getElementById('status')
 
-  try {
-    const [mobileRes, desktopRes] = await Promise.all([
-      fetch(\`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=\${encodeURIComponent(url)}&strategy=mobile\`),
-      fetch(\`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=\${encodeURIComponent(url)}&strategy=desktop\`)
-    ])
-    const [mobile, desktop] = await Promise.all([mobileRes.json(), desktopRes.json()])
+let latestRequestId = 0   // every keystroke that fires a search bumps this
+let debounceTimer = null
 
-    const mScore = Math.round((mobile.lighthouseResult?.categories?.performance?.score ?? 0) * 100)
-    const dScore = Math.round((desktop.lighthouseResult?.categories?.performance?.score ?? 0) * 100)
-    const audits = mobile.lighthouseResult?.audits ?? {}
+input.addEventListener('input', (e) => {
+  const query = e.target.value.trim()
 
-    const lcp  = audits['largest-contentful-paint']?.displayValue ?? 'N/A'
-    const cls  = audits['cumulative-layout-shift']?.displayValue ?? 'N/A'
-    const tbt  = audits['total-blocking-time']?.displayValue ?? 'N/A'
+  // Don't fire a request on every keystroke — wait for a short pause.
+  clearTimeout(debounceTimer)
+  if (!query) { list.innerHTML = ''; status.textContent = ''; return }
 
-    const issues = Object.values(audits)
-      .filter(a => a.details?.type === 'opportunity' && a.score != null && a.score < 0.9)
-      .sort((a, b) => (a.score ?? 1) - (b.score ?? 1))
-      .slice(0, 3)
+  status.textContent = 'Searching…'
+  debounceTimer = setTimeout(() => runSearch(query), 200)
+})
 
-    function scoreClass(s) { return s >= 90 ? 'good' : s >= 50 ? 'ok' : 'poor' }
+async function runSearch(query) {
+  const requestId = ++latestRequestId    // claim this request's sequence number
+  const results = await searchCities(query)
 
-    results.innerHTML = \`
-      <div class="score-grid">
-        <div class="score-card">
-          <div class="score-num \${scoreClass(mScore)}">\${mScore}</div>
-          <div class="score-lbl">Mobile</div>
-        </div>
-        <div class="score-card">
-          <div class="score-num \${scoreClass(dScore)}">\${dScore}</div>
-          <div class="score-lbl">Desktop</div>
-        </div>
-      </div>
-      <div class="vitals">
-        <div class="vital"><div class="vital-val">\${lcp}</div><div class="vital-lbl">Largest Contentful Paint</div></div>
-        <div class="vital"><div class="vital-val">\${cls}</div><div class="vital-lbl">Layout Shift</div></div>
-        <div class="vital"><div class="vital-val">\${tbt}</div><div class="vital-lbl">Total Blocking Time</div></div>
-      </div>
-      \${issues.length ? \`<div class="issues-title">Top issues to fix</div>\${issues.map(i =>
-        \`<div class="issue">\${i.title}: \${i.displayValue ?? ''}</div>\`).join('')}\` : ''}
-    \`
-  } catch (e) {
-    results.innerHTML = '<p class="loading">Could not fetch — check the URL and try again.</p>'
-  }
+  // If a newer request started while we were waiting, this response is stale —
+  // throw it away so it can't overwrite fresher results.
+  if (requestId !== latestRequestId) return
+
+  render(query, results)
+}
+
+function render(query, results) {
+  status.textContent = ''
+  list.innerHTML = results.length
+    ? results.map(c => '<li>' + c + '</li>').join('')
+    : '<li class="empty">No cities match "' + query + '"</li>'
 }`,
 }
 
+// What the grader looks for, per coding bounty. Specific beats generic.
+const CODE_EVAL_CRITERIA = [
+  'Do the results always match the current input?',
+  'Are out-of-order responses handled, not just hidden by luck?',
+  'Is the fix clean and clearly reasoned?',
+]
+
 function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
   const [activeFile, setActiveFile] = useState(files[0].name)
-  const [preview, setPreview] = useState(false)
-  const previewRef = useRef(null)
+  const [rightTab, setRightTab] = useState('preview')   // 'preview' | 'chat'
+  const [previewKey, setPreviewKey] = useState(0)        // bump to force-reload the iframe
+  const [autoRun, setAutoRun] = useState(true)
 
   const current = files.find(f => f.name === activeFile) ?? files[0]
   const content = fileContents[activeFile] ?? current.content
   const changed = files.some(f => f.editable && (fileContents[f.name] ?? f.content) !== f.content)
 
-  function loadDemo() {
-    Object.entries(DEMO_SOLUTION).forEach(([name, val]) => onEdit(name, val))
-    setActiveFile('app.js')
-  }
+  // Assemble the live document from the current file contents. Recomputed each
+  // render; the iframe re-runs whenever previewKey changes (manual or auto).
+  const previewDoc = buildPreviewDoc(files, fileContents)
 
-  function runPreview() {
-    const html = fileContents['index.html'] ?? files.find(f => f.name === 'index.html')?.content ?? ''
-    const js   = fileContents['app.js']     ?? files.find(f => f.name === 'app.js')?.content ?? ''
-    const css  = fileContents['style.css']  ?? files.find(f => f.name === 'style.css')?.content ?? ''
-    const doc = html
-      .replace('</head>', `<style>${css}</style></head>`)
-      .replace('<script src="app.js"></script>', `<script>${js}</script>`)
-    if (previewRef.current) {
-      previewRef.current.srcdoc = doc
-    }
-    setPreview(true)
-  }
+  // Auto hot-reload the preview a beat after edits stop (like a real dev server).
+  useEffect(() => {
+    if (!autoRun || rightTab !== 'preview') return
+    const t = setTimeout(() => setPreviewKey(k => k + 1), 500)
+    return () => clearTimeout(t)
+  }, [previewDoc, autoRun, rightTab])
 
   const GLYPH = { html: { t: 'H', c: '#e34f26', f: '#fff' }, js: { t: 'JS', c: '#f7df1e', f: '#000' }, css: { t: 'C', c: '#264de4', f: '#fff' }, md: { t: 'MD', c: '#555', f: '#fff' } }
 
@@ -782,8 +855,6 @@ function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
           <span>{c.company} · {c.title}</span>
         </div>
         <div className="cse-topbar-actions">
-          <button className="cse-demo-btn" onClick={loadDemo}>⚡ Load Demo</button>
-          <button className="cse-run-btn" onClick={runPreview}>▶ Run Preview</button>
           <button
             className="cse-submit-btn"
             style={{ background: changed ? c.companyColor : '#555', cursor: changed ? 'pointer' : 'not-allowed' }}
@@ -798,16 +869,21 @@ function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
       <div className="cse-body">
         {/* Problem pane */}
         <div className="cse-brief">
-          <div className="cse-brief-hdr">Brief</div>
+          <div className="cse-brief-hdr">The ticket</div>
           <p className="cse-brief-text">{c.description}</p>
           <div className="cse-brief-hdr" style={{ marginTop: 20 }}>What we evaluate</div>
-          {['Does it work on any URL?', 'Is output readable to a non-engineer?', 'Is the code clean enough to hand off?'].map(s => (
+          {CODE_EVAL_CRITERIA.map(s => (
             <div key={s} className="cse-brief-item">
               <span className="bd-check" style={{ background: c.companyColor, flexShrink: 0 }}><IconCheck size={9} strokeWidth={3} /></span>
               {s}
             </div>
           ))}
-          <div className="cse-ai-note"><IconSparkles size={13} /> AI grades on judgment — using APIs, docs, or AI tools is fine.</div>
+          <div className="cse-ai-note">
+            <IconSparkles size={13} />
+            {AI_ENABLED
+              ? 'Stuck? Ask the AI Assistant tab — describe the problem and it helps. Using docs or AI is encouraged.'
+              : 'AI grades on judgment — using APIs, docs, or AI tools is fine.'}
+          </div>
         </div>
 
         {/* IDE */}
@@ -827,29 +903,152 @@ function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
             })}
           </div>
 
-          {/* Editor + preview */}
+          {/* Editor — always editable, never replaced by the preview */}
           <div className="cse-editor-wrap">
             <div className="cse-editor-hdr">
               <span className="cse-dot r" /><span className="cse-dot y" /><span className="cse-dot g" />
               <span className="cse-editor-fname">{activeFile}</span>
               {!current.editable && <span className="cse-readonly">read-only</span>}
-              {preview && <button className="cse-close-preview" onClick={() => setPreview(false)}>✕ Close preview</button>}
             </div>
-            {preview ? (
-              <iframe ref={previewRef} className="cse-preview-frame" sandbox="allow-scripts" title="preview" />
-            ) : (
-              <textarea
-                className="cse-editor"
-                value={content}
-                onChange={e => onEdit(activeFile, e.target.value)}
-                readOnly={!current.editable}
-                spellCheck={false}
-              />
-            )}
+            <Editor
+              className="cse-monaco"
+              path={activeFile}
+              language={MONACO_LANG[current.lang] ?? 'plaintext'}
+              value={content}
+              onChange={(val) => onEdit(activeFile, val ?? '')}
+              theme="light"
+              options={{
+                readOnly: !current.editable,
+                fontSize: 13,
+                fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                padding: { top: 14 },
+                tabSize: 2,
+                automaticLayout: true,
+              }}
+              loading={<div className="cse-monaco-loading">Loading editor…</div>}
+            />
+          </div>
+
+          {/* Right panel — Preview / AI Assistant tabs, side-by-side with the editor */}
+          <div className="cse-right">
+            <div className="cse-right-tabs">
+              <button className={`cse-rtab${rightTab === 'preview' ? ' active' : ''}`} onClick={() => setRightTab('preview')}>
+                <IconEye size={13} /> Preview
+              </button>
+              <button className={`cse-rtab${rightTab === 'chat' ? ' active' : ''}`} onClick={() => setRightTab('chat')}>
+                <IconMessageChatbot size={13} /> AI Assistant
+              </button>
+              {rightTab === 'preview' && (
+                <div className="cse-right-tools">
+                  <label className="cse-autorun" title="Re-run automatically as you type">
+                    <input type="checkbox" checked={autoRun} onChange={e => setAutoRun(e.target.checked)} /> Auto
+                  </label>
+                  <button className="cse-rerun-btn" onClick={() => setPreviewKey(k => k + 1)} title="Re-run preview">
+                    <IconRefresh size={13} /> Run
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="cse-right-body">
+              {rightTab === 'preview' ? (
+                <iframe key={previewKey} srcDoc={previewDoc} className="cse-preview-frame" sandbox="allow-scripts" title="preview" />
+              ) : (
+                <AssistantPanel c={c} files={files} fileContents={fileContents} />
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+/* ── AI Assistant chat panel ── */
+function AssistantPanel({ c, files, fileContents }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: AI_ENABLED
+        ? `Hey! I'm your AI pair on the "${c.title}" ticket. Ask me to explain the bug, suggest a fix, or review your code — I can see all your files.`
+        : `The AI Assistant needs a Groq API key (VITE_GROQ_KEY) to run. You can still solve the ticket without it — AI help is allowed but optional.` },
+  ])
+  const [input, setInput] = useState('')
+  const [busy, setBusy] = useState(false)
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [messages, busy])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || busy) return
+    setInput('')
+    const history = messages.filter(m => m.role !== 'system').map(m => ({ role: m.role, content: m.content }))
+    setMessages(prev => [...prev, { role: 'user', content: text }])
+    if (!AI_ENABLED) {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'AI is offline (no API key configured), so I can\'t answer live right now — but your approach is what gets graded. Read the ticket in api.js / README.md and trace how responses can arrive out of order.' }])
+      return
+    }
+    setBusy(true)
+    const reply = await askAssistant({ challenge: c, files, fileContents, history, userText: text })
+    setBusy(false)
+    setMessages(prev => [...prev, {
+      role: 'assistant',
+      content: reply ?? 'I hit an error reaching the AI service. Try again in a moment — and remember you can solve this without me.',
+    }])
+  }
+
+  const SUGGESTIONS = ['Why does typing fast show the wrong city?', 'How do I fix the race condition?', 'Review my app.js']
+
+  return (
+    <div className="cse-chat">
+      <div className="cse-chat-log" ref={scrollRef}>
+        {messages.map((m, i) => (
+          <div key={i} className={`cse-msg ${m.role}`}>
+            {m.role === 'assistant' && <span className="cse-msg-ava" style={{ background: c.companyColor }}><IconSparkles size={11} /></span>}
+            <div className="cse-msg-bubble">{renderChat(m.content)}</div>
+          </div>
+        ))}
+        {busy && (
+          <div className="cse-msg assistant">
+            <span className="cse-msg-ava" style={{ background: c.companyColor }}><IconSparkles size={11} /></span>
+            <div className="cse-msg-bubble cse-msg-typing"><span /><span /><span /></div>
+          </div>
+        )}
+      </div>
+      {messages.length <= 1 && AI_ENABLED && (
+        <div className="cse-chat-suggest">
+          {SUGGESTIONS.map(s => (
+            <button key={s} className="cse-suggest-chip" onClick={() => setInput(s)}>{s}</button>
+          ))}
+        </div>
+      )}
+      <div className="cse-chat-input">
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+          placeholder={AI_ENABLED ? 'Ask the assistant… (Enter to send)' : 'AI is offline'}
+          rows={2}
+          disabled={!AI_ENABLED}
+        />
+        <button className="cse-chat-send" onClick={send} disabled={busy || !input.trim()} style={{ background: c.companyColor }}>
+          <IconSend size={15} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Minimal chat renderer: splits ```fenced``` code blocks into <pre>, leaves the
+// rest as plain text. Keeps the panel readable without pulling in a markdown lib.
+function renderChat(text) {
+  const parts = String(text).split(/```(?:[a-zA-Z]*)\n?/)
+  return parts.map((part, i) =>
+    i % 2 === 1
+      ? <pre key={i} className="cse-code-block">{part.replace(/\n$/, '')}</pre>
+      : <span key={i} className="cse-msg-text">{part}</span>
   )
 }
 
@@ -1106,6 +1305,139 @@ function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
             onClick={addToProfile}
           >
             {added ? <><IconCheck size={16} strokeWidth={3} /> Added to profile</> : 'Add badge to profile'}
+          </button>
+          <button className="ba-more-btn" onClick={onBack}>Browse more bounties</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Coding review (no score shown) ──
+   The candidate never sees a number. Their submission is pre-screened by AI only
+   to decide whether it reaches the top 10; if it does, it's handed to a recruiter
+   and an engineer for review. The verified badge is awarded ONLY after both
+   approve (handled in the recruiter dashboard, persisted to the DB). Here we just
+   record an "in review" badge so the profile shows the pending state. */
+function CodingReviewView({ c, aiResult, onEarnBadge, onBack }) {
+  const [dots, setDots] = useState('.')
+  const [added, setAdded] = useState(false)
+
+  useEffect(() => {
+    if (aiResult) return
+    const t = setInterval(() => setDots(d => (d.length >= 3 ? '.' : d + '.')), 500)
+    return () => clearInterval(t)
+  }, [aiResult])
+
+  // Pre-screen result is only ever used to gate the top 10 — never displayed.
+  const { rank, madeTop10 } = aiResult ? buildShortlist(aiResult.score) : { rank: null, madeTop10: false }
+
+  function addToReview() {
+    if (added) return
+    onEarnBadge?.({
+      id: LI_RACE_BOUNTY_ID,
+      company: c.company,
+      companyColor: c.companyColor,
+      title: c.title,
+      category: c.category,
+      rank,
+    }, REVIEW_STATUS.IN_REVIEW)
+    setAdded(true)
+  }
+
+  if (!aiResult) {
+    return (
+      <div className="bounty-page">
+        <div className="bd-wrap rs-wrap">
+          <div className="rs-hdr">
+            <span className="rs-co" style={{ background: c.companyColor }}>{c.company[0]}</span>
+            <div>
+              <div className="rs-title">{c.company} · {c.title}</div>
+              <div className="rs-sub">Checking your fix against the bounty's acceptance criteria to see if it reaches the shortlist.</div>
+            </div>
+          </div>
+          <div className="rs-loading">
+            <div className="rs-spinner" style={{ borderTopColor: c.companyColor }} />
+            <div className="rs-loading-text">Submitting for review{dots}</div>
+            <div className="rs-loading-hint">This usually takes 5–15 seconds</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Didn't make the shortlist — no review, no badge.
+  if (!madeTop10) {
+    return (
+      <div className="bounty-page">
+        <div className="bd-wrap ba-center">
+          <div className="ba-confetti">📨</div>
+          <h2 className="ba-title">Submitted — not shortlisted</h2>
+          <p className="ba-subtitle">
+            Thanks for taking on the {c.company} ticket. Only the top 10 submissions go to
+            recruiter and engineering review, and this one didn't make the cut this round —
+            so no badge is awarded. Your work is saved; you can refine your fix and resubmit.
+          </p>
+          <div className="ba-actions">
+            <button className="ba-more-btn" onClick={onBack}>Browse more bounties</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Made the top 10 — submission enters the recruiter → engineer review pipeline.
+  const steps = [
+    { key: 'submitted', label: 'Submission received', sub: `Shortlisted — placed #${rank} of the top 10`, state: 'done' },
+    { key: 'recruiter', label: 'Recruiter review', sub: `A ${c.company} recruiter verifies your submission`, state: 'active' },
+    { key: 'engineer', label: 'Engineering review', sub: 'An engineer confirms the fix resolves the root cause', state: 'pending' },
+    { key: 'badge', label: 'Verified badge awarded', sub: 'Unlocked once both approve', state: 'pending' },
+  ]
+
+  return (
+    <div className="bounty-page">
+      <div className="bd-wrap ba-center">
+        <div className="ba-confetti">🏆</div>
+        <h2 className="ba-title">Top 10 — placed #{rank}!</h2>
+        <p className="ba-subtitle">
+          Your fix made {c.company}'s shortlist. There's <strong>no score to chase</strong> —
+          from here a recruiter and an engineer review your submission, and the verified badge
+          is awarded only if both approve.
+        </p>
+
+        <div className="cr-steps">
+          {steps.map((s, i) => (
+            <div key={s.key} className={`cr-step cr-step-${s.state}`}>
+              <span className="cr-step-mark" style={s.state === 'done' ? { background: c.companyColor, borderColor: c.companyColor } : undefined}>
+                {s.state === 'done' ? <IconCheck size={12} strokeWidth={3} /> : i + 1}
+              </span>
+              <div className="cr-step-body">
+                <div className="cr-step-label">{s.label}</div>
+                <div className="cr-step-sub">{s.sub}</div>
+              </div>
+              {s.state === 'active' && <span className="cr-step-chip"><IconClock size={11} /> In review</span>}
+            </div>
+          ))}
+        </div>
+
+        <div className="ba-badge-card">
+          <div className="ba-badge-logo" style={{ background: c.companyColor }}>{c.company[0]}</div>
+          <div className="ba-badge-info">
+            <div className="ba-badge-name">{c.company} Bounty · {c.title}</div>
+            <div className="ba-badge-meta">Top 10 · #{rank} · {c.category}</div>
+            <div className="ba-verified" style={{ color: '#b45309' }}>
+              <IconClock size={11} strokeWidth={3} /> Pending recruiter + engineering review
+            </div>
+          </div>
+        </div>
+
+        <div className="ba-actions">
+          <button
+            className="ba-profile-btn"
+            style={{ background: added ? '#059669' : c.companyColor }}
+            onClick={addToReview}
+          >
+            {added ? <><IconCheck size={16} strokeWidth={3} /> Added — tracking on profile</> : 'Add to profile as “In review”'}
           </button>
           <button className="ba-more-btn" onClick={onBack}>Browse more bounties</button>
         </div>

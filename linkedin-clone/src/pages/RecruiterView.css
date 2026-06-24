@@ -594,6 +594,15 @@ a.rv-sd-file:hover { background: #dbeafe; }
 .rv-prev-skeleton { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 0; }
 .rv-prev-skeleton span { height: 9px; border-radius: 5px; background: linear-gradient(90deg,#eee,#f6f6f6,#eee); }
 
+/* code submission preview (engineering bounties) */
+.rv-prev-code {
+  margin: 0; padding: 14px 16px; background: #0d1117; color: #e6edf3;
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px; line-height: 1.6; overflow-x: auto; white-space: pre;
+  max-height: 320px; overflow-y: auto;
+}
+.rv-prev-code code { font-family: inherit; }
+
 /* engineer review link block under "send to engineer" */
 .rv-sd-review-link { margin-top: 12px; }
 .rv-sd-review-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }

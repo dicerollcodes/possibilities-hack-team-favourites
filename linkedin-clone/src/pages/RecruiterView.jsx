@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import './RecruiterView.css'
 import { supabase } from '../lib/supabase'
+import {
+  LI_RACE_BOUNTY_ID, REVIEW_STATUS, DEMO_USER_ID, DEMO_USER_NAME,
+  fetchBountyStatus, setBountyStatus, normalizeStatus,
+} from '../lib/demoUser'
+import { runReviewPipeline } from '../lib/aiPipeline'
 
 /* Emily is a recruiter at LinkedIn. She can open her own company's bounties,
    but not other companies' (their candidate data is private to them). */
@@ -35,34 +40,56 @@ const FALLBACK_BOUNTIES = [
   { id:'demo_innov', company:'Innovatech', description:'Your task: build a Python tool that auto-generates 10 multiple-choice questions from a chapter excerpt using an NLP technique for distractors, exported as structured JSON.', potential_job_position:'HR Coordinator', awardees:[{id:'user_9435'}] },
 ]
 
-/* The completed LinkedIn bounty Emily already ran — always present in her
-   dashboard (the live DB has no LinkedIn rows of its own). Same live-table
-   shape as everything else; deduped by id if it ever lands in the DB too. */
+/* The open LinkedIn coding bounty Emily is reviewing — always present in her
+   dashboard (the live DB has no LinkedIn rows of its own). This is the SAME
+   bounty the candidate app exposes (city-search race condition), keyed by the
+   shared LI_RACE_BOUNTY_ID so a review decision here writes back to the
+   candidate's member row and unlocks their badge.
+
+   Panav (our demo submitter, the same person on the candidate /profile) is an
+   awardee with his actual code fix inline in the bounties.awardees jsonb, so the
+   recruiter sees the real submitted work without any download. He carries
+   DEMO_USER_ID so approving him persists to members.bounty_status. */
 const SEED_LINKEDIN_BOUNTY = {
-  id: 'bounty_li_completed_pilot',
+  id: LI_RACE_BOUNTY_ID,
   company: RECRUITER_COMPANY,
-  description: 'LinkedIn ran this internal bounty as a completed pilot. Your task: redesign the student profile page to better showcase verified bounty badges to recruiters.',
-  // Panav is our demo submitter — his full solution + live URL live right here
-  // in the bounties.awardees jsonb (the live DB stores arbitrary keys), so the
-  // recruiter sees the actual work without any download.
+  description: 'A real bug from our Search UX backlog. Your task: fix the location type-ahead so the rendered results always match the current input. Typing "london" fast surfaces a classic autocomplete race — shorter queries come back slower, so an earlier keystroke\'s response lands after a later one and overwrites the correct results. Candidates fix it in a live in-browser IDE; AI is allowed. Top 10 come here for recruiter + engineering review.',
   awardees: [
     {
-      id: 'user_panav',
-      name: 'Panav Sharma',
-      school: 'University of Waterloo · CS',
-      avatar: 'PS',
+      id: DEMO_USER_ID,
+      name: DEMO_USER_NAME,
+      school: 'UT Austin · CS',
+      avatar: 'PM',
       avatar_bg: '#0a66c2',
-      score: 99,
-      time: '4h 26m',
-      solution: "Rebuilt the student profile around recruiter-verified proof. A new badge rail pins completed bounties above the fold; a 'Verified Work' section replaces the generic skills list with evidence — bounty score, time-to-solve, and live links. A recruiter-mode toggle reorders the page to lead with outcomes. Shipped a live React prototype plus Figma source, fully responsive with skeleton-loading states.",
-      solution_url: 'https://panav-profile-redesign.linkedbounty.app',
+      score: 96,
+      time: '38m',
+      solution: "Diagnosed the out-of-order async race: every keystroke fired a request and whichever resolved last won, so a slow short-prefix response could clobber the correct one. Fix debounces the input (200ms) and stamps each request with a monotonically increasing id; on resolve, a response whose id isn't the latest is dropped. Net effect: the list always matches the box, and we stop hammering the API on every keystroke. Also added an empty-query guard to clear stale results.",
+      solution_url: 'https://panav-citysearch-fix.linkedbounty.app',
+      solution_lang: 'js',
+      solution_code: `let latestRequestId = 0
+let debounceTimer = null
+
+input.addEventListener('input', (e) => {
+  const query = e.target.value.trim()
+  clearTimeout(debounceTimer)
+  if (!query) { list.innerHTML = ''; status.textContent = ''; return }
+  status.textContent = 'Searching…'
+  debounceTimer = setTimeout(() => runSearch(query), 200)
+})
+
+async function runSearch(query) {
+  const requestId = ++latestRequestId      // claim a sequence number
+  const results = await searchCities(query)
+  if (requestId !== latestRequestId) return // stale response — drop it
+  render(query, results)
+}`,
     },
     { id: 'user_4410' },
     { id: 'user_7793' },
   ],
-  potential_job_position: 'Product Designer',
+  potential_job_position: 'Software Engineer',
   potential_job_ids: [],
-  relevant_course_name: 'UX/UI Design',
+  relevant_course_name: 'Async JavaScript & Concurrency',
   relevant_course_id: 'course_6335',
 }
 
@@ -606,21 +633,23 @@ function PostBountyView({ onHome, onDone }) {
 
 const SUBMIT_LABELS = { github:'GitHub Repo', figma:'Figma / Image Link', excel:'Excel / PDF Report', campaign:'Campaign Plan (Slides)', email:'Written Outreach', dashboard:'Data Dashboard', presentation:'Presentation Deck' }
 
-/* ─── BOUNTY MEDAL LEADERBOARD (per-company bounty) ─── */
+/* ─── BOUNTY MEDAL LEADERBOARD (per-company bounty) ───
+   Engineering submissions for the city-search race-condition bounty. Each is a
+   distinct, plausible approach so the recruiter has a real spread to judge. */
 const BOUNTY_POOL = [
-  { id:'p1',  name:'Aisha Nwosu',     school:'MIT · CS Senior',          avatar:'AN', avatarBg:'#0a66c2', score:98, time:'5h 12m', solution:'Rebuilt the profile header with a verified-badge rail and a recruiter-first information hierarchy. Shipped a Figma prototype plus a working React slice with skeleton states.' },
-  { id:'p2',  name:'Diego Ramos',     school:'Stanford · CS Junior',     avatar:'DR', avatarBg:'#7c2ae8', score:97, time:'6h 02m', solution:'Ran a 12-person usability study on the current profile, then redesigned the skills section around evidence (badges, links, metrics). Included before/after task-completion data.' },
-  { id:'p3',  name:'Mei Lin',         school:'CMU · HCI Masters',        avatar:'ML', avatarBg:'#059669', score:96, time:'4h 48m', solution:'Designed a progressive-disclosure profile that surfaces bounty proof above the fold. Annotated every decision with a rationale and WCAG AA contrast checks.' },
-  { id:'p4',  name:'Sam Okafor',      school:'GA Tech · CS Senior',      avatar:'SO', avatarBg:'#e8590c', score:95, time:'7h 20m', solution:'Built a clickable prototype with a recruiter mode toggle that reorders the profile to lead with verified work. Strong visual polish, slightly thin on research.' },
-  { id:'p5',  name:'Priya Kapoor',    school:'UT Austin · CS Senior',    avatar:'PK', avatarBg:'#e03e2d', score:94, time:'5h 55m', solution:'Focused on the first-job storytelling angle — a timeline that ties each badge to a concrete skill. Clean component breakdown and a tidy design-token sheet.' },
-  { id:'p6',  name:'Tomás García',    school:'Berkeley · EECS Junior',   avatar:'TG', avatarBg:'#0a66c2', score:93, time:'6h 41m', solution:'Prototype emphasizes social proof (endorsements + bounty rank). Good interaction design, but the recruiter flow needed one fewer step.' },
-  { id:'p7',  name:'Hana Bauer',      school:'UW · Design Senior',       avatar:'HB', avatarBg:'#7c2ae8', score:92, time:'8h 03m', solution:'Strong visual system and a thoughtful empty state for students with zero badges yet. Submitted PNG screens plus a one-page rationale.' },
-  { id:'p8',  name:'Noah Williams',   school:'UIUC · CS Junior',         avatar:'NW', avatarBg:'#059669', score:91, time:'5h 30m', solution:'Reframed the profile around "proof of work". Solid IA, but the chart for skill coverage felt decorative rather than informative.' },
-  { id:'p9',  name:'Lena Fischer',    school:'NYU · IxD Senior',         avatar:'LF', avatarBg:'#e8590c', score:90, time:'6h 18m', solution:'Mobile-first redesign with a sticky badge summary. Nice motion design; needs a desktop pass for wide screens.' },
-  { id:'p10', name:'Omar Said',       school:'Purdue · CS Senior',       avatar:'OS', avatarBg:'#e03e2d', score:89, time:'7h 47m', solution:'Mapped the full recruiter journey then redesigned only the highest-leverage screen. Pragmatic and well-justified.' },
-  { id:'p11', name:'Yuki Tanaka',     school:'UMich · CS Junior',        avatar:'YT', avatarBg:'#0a66c2', score:88, time:'6h 09m', solution:'Clean, conventional redesign. Everything works; nothing surprises. Good baseline candidate if a top pick drops out.' },
-  { id:'p12', name:'Ivan Petrov',     school:'UCSD · CS Senior',         avatar:'IP', avatarBg:'#7c2ae8', score:87, time:'5h 02m', solution:'Strong engineering proof-of-concept with real data binding, lighter on visual craft. Would shine on an eng-leaning role.' },
-  { id:'p13', name:'Grace Kim',       school:'Cornell · CS Junior',      avatar:'GK', avatarBg:'#059669', score:86, time:'8h 31m', solution:'Research-heavy submission with a competitive teardown of three rival profile pages. Recommendations were sharp.' },
+  { id:'p1',  name:'Aisha Nwosu',     school:'MIT · CS Senior',          avatar:'AN', avatarBg:'#0a66c2', score:98, time:'31m', solution:'Used AbortController: each keystroke aborts the in-flight fetch before starting the next, so a stale response can never resolve. Debounced at 150ms. Clean, idiomatic, and exactly how you\'d ship it against a real endpoint.' },
+  { id:'p2',  name:'Diego Ramos',     school:'Stanford · CS Junior',     avatar:'DR', avatarBg:'#7c2ae8', score:97, time:'42m', solution:'Monotonic request-id guard plus a 200ms debounce. Drops any response whose id isn\'t the latest. Wrote a short note explaining why latency ordering is not guaranteed. Solid reasoning.' },
+  { id:'p3',  name:'Mei Lin',         school:'CMU · MSCS',               avatar:'ML', avatarBg:'#059669', score:96, time:'29m', solution:'Tracked the latest query string and compared it on resolve — only renders if the response\'s query still equals the box value. Also coalesces identical in-flight queries. Elegant.' },
+  { id:'p4',  name:'Sam Okafor',      school:'GA Tech · CS Senior',      avatar:'SO', avatarBg:'#e8590c', score:95, time:'51m', solution:'AbortController + debounce, with a loading state per request. Correct fix; the abort handling swallowed errors a little too broadly but the race is gone.' },
+  { id:'p5',  name:'Priya Kapoor',    school:'UT Austin · CS Senior',    avatar:'PK', avatarBg:'#e03e2d', score:94, time:'44m', solution:'Sequence-number guard on responses. Clear variable names and a comment block on the race. Didn\'t debounce, so it still fires per keystroke, but results always match the input.' },
+  { id:'p6',  name:'Tomás García',    school:'Berkeley · EECS Junior',   avatar:'TG', avatarBg:'#0a66c2', score:93, time:'58m', solution:'Stored the latest query in a ref and bailed out of render() when it changed. Works, but leans on a closure that\'s easy to break later. Reasoning was good.' },
+  { id:'p7',  name:'Hana Bauer',      school:'UW · CS Senior',           avatar:'HB', avatarBg:'#7c2ae8', score:92, time:'1h 06m', solution:'Promise-token approach: each search captures a token, compares on resolve. Added a tiny test harness that fires three overlapping queries to prove ordering. Nice touch.' },
+  { id:'p8',  name:'Noah Williams',   school:'UIUC · CS Junior',         avatar:'NW', avatarBg:'#059669', score:91, time:'47m', solution:'Debounce only (300ms). Hides the race most of the time by spacing requests out, but a slow response can still clobber — partial fix, honest writeup acknowledging the gap.' },
+  { id:'p9',  name:'Lena Fischer',    school:'NYU · CS Senior',          avatar:'LF', avatarBg:'#e8590c', score:90, time:'1h 02m', solution:'Latest-wins guard via a module-scoped counter, plus clearing results on empty input. Straightforward and correct; minimal comments.' },
+  { id:'p10', name:'Omar Said',       school:'Purdue · CS Senior',       avatar:'OS', avatarBg:'#e03e2d', score:89, time:'1h 19m', solution:'AbortController per request stored in a Map keyed by query. Over-engineered for the problem, but no stale renders and it cancels cleanly.' },
+  { id:'p11', name:'Yuki Tanaka',     school:'UMich · CS Junior',        avatar:'YT', avatarBg:'#0a66c2', score:88, time:'55m', solution:'Request-id guard, no debounce. Conventional and correct. Good baseline candidate if a top pick drops out.' },
+  { id:'p12', name:'Ivan Petrov',     school:'UCSD · CS Senior',         avatar:'IP', avatarBg:'#7c2ae8', score:87, time:'1h 11m', solution:'Compared response query to current input before render. Solid, if light on explanation of why latency varies. Would shine with more reasoning.' },
+  { id:'p13', name:'Grace Kim',       school:'Cornell · CS Junior',      avatar:'GK', avatarBg:'#059669', score:86, time:'1h 28m', solution:'Disabled the input while a request was pending to serialize calls. Eliminates the race but hurts UX — flagged as a trade-off in the writeup.' },
 ]
 
 /* every submission gets a live, viewable solution URL (no download needed) */
@@ -650,12 +679,39 @@ function makePool(bounty) {
     .sort((a, b) => b.score - a.score)
 }
 
+// Local board status ↔ DB review status. The board's "pending" (submitted,
+// awaiting the recruiter) is the DB's "in_review".
+const DB_TO_LOCAL = {
+  [REVIEW_STATUS.IN_REVIEW]: 'pending',
+  [REVIEW_STATUS.RECRUITER_OK]: 'recruiter_ok',
+  [REVIEW_STATUS.AWARDED]: 'awarded',
+  [REVIEW_STATUS.DENIED]: 'denied',
+}
+
 function BountyBoardView({ bounty, onBack, onMessage }) {
   const [pool] = useState(() => makePool(bounty))
   const [statuses, setStatuses] = useState({}) // id -> pending | recruiter_ok | awarded | denied
   const [awardOrder, setAwardOrder] = useState([]) // ids in the order medals were finalized
   const [notified, setNotified] = useState({}) // id -> true (engineer emailed)
   const [selectedId, setSelectedId] = useState(null)
+
+  // This board's decisions on the demo user persist to the live DB (members
+  // .bounty_status), which the candidate's profile reads. Only the LinkedIn race
+  // bounty is wired to a real member row.
+  const persists = bounty.id === LI_RACE_BOUNTY_ID
+
+  // Seed the demo user's board status from the DB so a fresh load reflects where
+  // his review already stands (e.g. 'in_review' after he submits).
+  useEffect(() => {
+    if (!persists) return
+    fetchBountyStatus().then(map => {
+      const s = normalizeStatus(map[LI_RACE_BOUNTY_ID])
+      const local = s && DB_TO_LOCAL[s]
+      if (!local) return
+      setStatuses(prev => ({ ...prev, [DEMO_USER_ID]: local }))
+      if (local === 'awarded') setAwardOrder(prev => prev.includes(DEMO_USER_ID) ? prev : [...prev, DEMO_USER_ID])
+    })
+  }, [persists])
 
   const statusOf = (id) => statuses[id] || 'pending'
   const awardedCount = awardOrder.length
@@ -667,12 +723,18 @@ function BountyBoardView({ bounty, onBack, onMessage }) {
 
   const setStatus = (id, s) => setStatuses(prev => ({ ...prev, [id]: s }))
 
-  const deny = (id) => { setStatus(id, 'denied'); setSelectedId(null) }
-  const recruiterApprove = (id) => setStatus(id, 'recruiter_ok')
+  // Persist a board decision to the DB when it's the demo user on the wired bounty.
+  const persistFor = (id, dbStatus) => {
+    if (persists && id === DEMO_USER_ID) setBountyStatus(LI_RACE_BOUNTY_ID, dbStatus)
+  }
+
+  const deny = (id) => { setStatus(id, 'denied'); persistFor(id, REVIEW_STATUS.DENIED); setSelectedId(null) }
+  const recruiterApprove = (id) => { setStatus(id, 'recruiter_ok'); persistFor(id, REVIEW_STATUS.RECRUITER_OK) }
   const engineerApprove = (id) => {
     if (medalsLeft <= 0) return
     setStatus(id, 'awarded')
     setAwardOrder(prev => prev.includes(id) ? prev : [...prev, id])
+    persistFor(id, REVIEW_STATUS.AWARDED)
   }
   const notifyEngineer = (id) => setNotified(prev => ({ ...prev, [id]: true }))
 
@@ -761,10 +823,20 @@ function StatusBadge({ status, medalRank }) {
 function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, medalRank, onBack, onNotify, onApprove, onDeny, onEngineerApprove, onMessage }) {
   const [email, setEmail] = useState('engineering@linkedin.com')
   const [reviewing, setReviewing] = useState(false)
+  const [pipelineResult, setPipelineResult] = useState(null)
+  const [grading, setGrading] = useState(false)
   const c = candidate
   const solutionUrl = c.solution_url || `https://linkedbounty.app/s/${c.id}`
-  // the link an engineer opens to review — carries the submission id
   const reviewUrl = `https://review.linkedbounty.app/engineering/${bounty.id}/${c.id}`
+
+  const runGrade = async () => {
+    setGrading(true)
+    const submission = [c.solution_code, c.solution].filter(Boolean).join('\n')
+    const isCoding = !!c.solution_code
+    const result = await runReviewPipeline(bounty, submission, isCoding)
+    setPipelineResult(result)
+    setGrading(false)
+  }
 
   return (
     <div className="rv-body">
@@ -783,7 +855,7 @@ function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, med
             <div style={{flex:1, minWidth:0}}>
               <div className="rv-sd-name">{c.name}</div>
               <div className="rv-sd-meta">
-                <span className="rv-sd-score">{c.score}<span className="rv-sd-score-sm">/100</span></span>
+                <span className="rv-sd-score">{pipelineResult ? pipelineResult.score : c.score}<span className="rv-sd-score-sm">/100</span></span>
                 <span className="rv-time-chip">⏱ {c.time} to solve</span>
                 <StatusBadge status={status} medalRank={medalRank} />
               </div>
@@ -793,6 +865,39 @@ function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, med
 
           <div className="rv-sd-section-lbl">📝 Solution summary</div>
           <p className="rv-sd-solution">{c.solution}</p>
+
+          {/* AI Pipeline re-grade */}
+          <div style={{marginTop:14, padding:'12px 14px', background:'#f3f8ff', borderRadius:8, border:'1px solid #d0e4ff'}}>
+            <div style={{display:'flex', alignItems:'center', gap:10, marginBottom: pipelineResult ? 10 : 0}}>
+              <span style={{fontSize:13, fontWeight:600, color:'#0a66c2'}}>⚡ AI Review Pipeline</span>
+              <button
+                onClick={runGrade}
+                disabled={grading}
+                style={{marginLeft:'auto', padding:'5px 12px', background: grading ? '#aaa' : '#0a66c2', color:'#fff', border:'none', borderRadius:6, fontSize:12, cursor: grading ? 'default' : 'pointer'}}
+              >
+                {grading ? 'Grading…' : pipelineResult ? 'Re-grade' : 'Run pipeline'}
+              </button>
+            </div>
+            {pipelineResult && (
+              <div style={{fontSize:13, color:'#1a1a1a'}}>
+                <div style={{display:'flex', gap:16, marginBottom:6}}>
+                  <span><strong>Score:</strong> {pipelineResult.score}/100</span>
+                  <span><strong>Percentile:</strong> {pipelineResult.percentile}</span>
+                  <span><strong>Method:</strong> {pipelineResult.method}</span>
+                  {pipelineResult.agents?.A?.source && (
+                    <span style={{color:'#6b6b6b'}}>Agent A: {pipelineResult.agents.A.score} · Agent B: {pipelineResult.agents.B.score}</span>
+                  )}
+                </div>
+                <div style={{color:'#444'}}>{pipelineResult.feedback}</div>
+                {pipelineResult.note && <div style={{marginTop:4, color:'#b45309', fontSize:12}}>⚠ {pipelineResult.note}</div>}
+                {pipelineResult.safety?.flags?.length > 0 && (
+                  <div style={{marginTop:4, color:'#dc2626', fontSize:12}}>
+                    Safety flags: {pipelineResult.safety.flags.map(f => f.type).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Live, inline preview of the submitted work — no download. */}
           <div className="rv-sd-section-lbl">🖥 Live submission</div>
@@ -879,10 +984,26 @@ function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, med
   )
 }
 
-/* Inline, rendered preview of a submitted solution — a mock browser frame so
-   the recruiter (and engineer) see the actual work, never a download. */
+/* Inline preview of a submitted solution — a mock browser/editor frame so the
+   recruiter (and engineer) see the actual work, never a download. Coding
+   submissions (solution_code present) render the candidate's diff; others fall
+   back to a rendered deliverable mock. */
 function SolutionPreview({ candidate, url }) {
   const c = candidate
+  if (c.solution_code) {
+    return (
+      <div className="rv-prev">
+        <div className="rv-prev-bar">
+          <span className="rv-prev-dot" style={{background:'#ff5f57'}}/>
+          <span className="rv-prev-dot" style={{background:'#febc2e'}}/>
+          <span className="rv-prev-dot" style={{background:'#28c840'}}/>
+          <span className="rv-prev-url">app.js · {url.replace('https://','')}</span>
+          <a className="rv-prev-open" href={url} target="_blank" rel="noreferrer">Open ↗</a>
+        </div>
+        <pre className="rv-prev-code"><code>{c.solution_code}</code></pre>
+      </div>
+    )
+  }
   return (
     <div className="rv-prev">
       <div className="rv-prev-bar">
@@ -892,7 +1013,6 @@ function SolutionPreview({ candidate, url }) {
         <span className="rv-prev-url">{url.replace('https://','')}</span>
         <a className="rv-prev-open" href={url} target="_blank" rel="noreferrer">Open ↗</a>
       </div>
-      {/* mock rendered profile-redesign deliverable */}
       <div className="rv-prev-body">
         <div className="rv-prev-cover"/>
         <div className="rv-prev-row">
