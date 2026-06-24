@@ -1003,9 +1003,20 @@ function ResultsView({ c, aiResult, onContinue }) {
   }, [aiResult, revealed, stages.length, reduced])
 
   const userScore = aiResult?.score ?? 0
-  const { top10, rank, madeTop10 } = aiResult ? buildShortlist(userScore) : { top10: [], rank: 0, madeTop10: false }
   const maxCount = stages[0].count
   const funnelDone = revealed >= stages.length && aiResult
+
+  function scoreColor(s) {
+    if (s >= 80) return '#059669'
+    if (s >= 60) return '#d97706'
+    return '#dc2626'
+  }
+  function scoreLabel(s) {
+    if (s >= 85) return 'Excellent'
+    if (s >= 70) return 'Strong'
+    if (s >= 55) return 'Good'
+    return 'Needs work'
+  }
 
   return (
     <div className="bounty-page">
@@ -1013,8 +1024,8 @@ function ResultsView({ c, aiResult, onContinue }) {
         <div className="rs-hdr">
           <span className="rs-co" style={{ background: c.companyColor }}>{c.companyLogo}</span>
           <div>
-            <div className="rs-title">Scoring the {c.company} bounty</div>
-            <div className="rs-sub">10,000 submissions in. The AI never sees the raw pool — only what clears the objective gate.</div>
+            <div className="rs-title">Your {c.company} submission</div>
+            <div className="rs-sub">Running through {c.submissions_count ?? 100} submissions — only what clears the quality gate reaches AI review.</div>
           </div>
         </div>
 
@@ -1028,7 +1039,7 @@ function ResultsView({ c, aiResult, onContinue }) {
                 <div className="rs-stage-top">
                   <span className="rs-stage-lbl">
                     {s.ai && <IconSparkles size={13} style={{ marginRight: 4, verticalAlign: -2 }} />}
-                    {isAiPending && i === revealed ? `Scoring ${stages[i - 1].count}…` : s.label}
+                    {isAiPending && i === revealed ? `Scoring submissions…` : s.label}
                   </span>
                   <span className="rs-stage-num">
                     {shown
@@ -1051,25 +1062,24 @@ function ResultsView({ c, aiResult, onContinue }) {
         </div>
 
         {funnelDone && (
-          <div className="rs-shortlist">
-            <div className="bd-section-label">Recruiter shortlist · Top 10</div>
-            {top10.map((p, i) => (
-              <div key={p.name + i} className={`rs-row${p.isUser ? ' you' : ''}`}>
-                <span className="rs-rank">{i + 1}</span>
-                <span className="rs-avatar" style={{ background: p.isUser ? c.companyColor : '#6b6b6b' }}>
-                  {initials(p.name)}
-                </span>
-                <span className="rs-name">{p.name}{p.isUser && <span className="rs-you-tag">you</span>}</span>
-                <span className="rs-score" style={{ color: p.isUser ? c.companyColor : '#333' }}>{p.score}</span>
+          <div className="rs-score-card">
+            <div className="rs-score-row">
+              <div className="rs-score-main">
+                <div className="rs-score-num" style={{ color: scoreColor(userScore) }}>{userScore}</div>
+                <div className="rs-score-label" style={{ color: scoreColor(userScore) }}>{scoreLabel(userScore)}</div>
               </div>
-            ))}
-            <div className="rs-gate-note">
-              {madeTop10
-                ? `You placed #${rank} — you're on ${c.company}'s recruiter shortlist.`
-                : `You cleared the objective gate — your verified ${c.company} badge is earned and you're now visible to ${c.company}'s recruiters.`}
+              <div className="rs-score-divider" />
+              <div className="rs-percentile-block">
+                <div className="rs-percentile-val">{aiResult.percentile}</div>
+                <div className="rs-percentile-lbl">of all submissions</div>
+              </div>
+            </div>
+            <div className="rs-feedback">
+              <div className="rs-feedback-label"><IconSparkles size={13} /> AI feedback</div>
+              <p className="rs-feedback-text">{aiResult.feedback}</p>
             </div>
             <button className="bd-start-btn" style={{ background: c.companyColor }} onClick={onContinue}>
-              See your verified badge <IconChevronRight size={16} />
+              Claim your verified badge <IconChevronRight size={16} />
             </button>
           </div>
         )}

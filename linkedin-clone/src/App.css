@@ -930,29 +930,18 @@
 .rs-bar-track { height: 10px; background: rgba(0,0,0,0.06); border-radius: 5px; overflow: hidden; }
 .rs-bar-fill { height: 100%; border-radius: 5px; transition: width .6s cubic-bezier(.4,0,.2,1); }
 
-.rs-shortlist { margin-top: 26px; padding-top: 20px; border-top: 1px solid #e8e8e8; }
-.rs-row {
-  display: flex; align-items: center; gap: 12px; padding: 9px 10px;
-  border-radius: 8px; transition: background .15s;
-}
-.rs-row:hover { background: #f4f2ee; }
-.rs-row.you { background: #ddedf7; }
-.rs-rank { width: 20px; font-size: 13px; font-weight: 800; color: #6b6b6b; text-align: center; flex-shrink: 0; }
-.rs-avatar {
-  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 12px; font-weight: 700;
-}
-.rs-name { flex: 1; font-size: 14px; font-weight: 600; color: #000; display: flex; align-items: center; gap: 8px; }
-.rs-you-tag {
-  font-size: 9px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
-  background: #0077b6; color: #fff; padding: 2px 6px; border-radius: 3px;
-}
-.rs-score { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
-.rs-gate-note {
-  margin: 18px 0 16px; padding: 12px 14px; border-radius: 8px;
-  background: #f4f2ee; font-size: 13px; color: #333; line-height: 1.5;
-}
+.rs-score-card { margin-top: 26px; padding-top: 22px; border-top: 1px solid #e8e8e8; }
+.rs-score-row { display: flex; align-items: center; gap: 0; margin-bottom: 20px; }
+.rs-score-main { flex: 1; text-align: center; }
+.rs-score-num { font-size: 64px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.rs-score-label { font-size: 13px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; margin-top: 4px; }
+.rs-score-divider { width: 1px; background: #e0e0e0; height: 60px; flex-shrink: 0; }
+.rs-percentile-block { flex: 1; text-align: center; }
+.rs-percentile-val { font-size: 26px; font-weight: 800; color: #1a1a1a; }
+.rs-percentile-lbl { font-size: 12px; color: #888; margin-top: 4px; }
+.rs-feedback { background: #f8f9fa; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; }
+.rs-feedback-label { font-size: 11.5px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; gap: 5px; margin-bottom: 7px; }
+.rs-feedback-text { font-size: 13.5px; color: #333; line-height: 1.6; }
 
 /* ── Profile: Verified Challenges card (gold #8B6914) ── */
 .vc-card { padding-bottom: 4px; }
