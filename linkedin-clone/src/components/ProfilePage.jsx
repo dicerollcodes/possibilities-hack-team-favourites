@@ -5,6 +5,7 @@ import {
   IconCamera, IconUserPlus,
 } from '@tabler/icons-react'
 import VerifiedChallengesCard from './VerifiedChallengesCard'
+import { isAwarded } from '../lib/demoUser'
 
 /* ──────────────────────────────────────────────
    Profile page — a faithful LinkedIn member-profile clone.
@@ -17,45 +18,32 @@ const GOLD = '#8B6914'
 
 const PROFILE = {
   name: 'Panav Mhatre',
-  headline: 'CS @ UT Austin · Prev SWE Intern @ Stripe, Vercel · Building proof-of-work hiring',
+  headline: 'SWE @ Google · CS @ UT Austin · Building proof-of-work hiring',
   location: 'Austin, Texas Metropolitan Area',
   connections: '500+',
   followers: '1,284',
   current: { kind: 'school', name: 'The University of Texas at Austin' },
   education: { name: 'The University of Texas at Austin' },
-  about: `Final-year CS student at UT Austin who learns by shipping. I care about the boring parts that make software trustworthy — idempotency, cache invalidation, and the edge cases everyone skips.
+  about: `CS grad from UT Austin who learns by shipping. I care about the boring parts that make software trustworthy — idempotency, cache invalidation, and the edge cases everyone skips.
 
-Most recently on Stripe's payments-reliability team, where a retry path I wrote now guards a few million requests a day. Before that, the edge-runtime team at Vercel.
+Now on Google's search-infrastructure team, where a retry path I own guards a large share of daily query traffic.
 
-I think a resume is a weak signal and proof-of-work is a strong one, so I spend my weekends clearing company bounties and collecting verified badges. Open to new-grad software engineering roles starting 2026.`,
+I think a resume is a weak signal and proof-of-work is a strong one, so I spend my weekends clearing company bounties and collecting verified badges.`,
 }
 
 const EXPERIENCE = [
   {
-    company: 'Stripe',
-    color: '#635bff',
-    logo: <StripeLogo />,
-    role: 'Software Engineer Intern',
-    dates: 'May 2025 – Aug 2025 · 4 mos',
-    place: 'San Francisco, CA · Hybrid',
+    company: 'Google',
+    color: '#4285f4',
+    logo: <GoogleLogo />,
+    role: 'Software Engineer',
+    dates: 'May 2026 – Present',
+    place: 'Mountain View, CA · On-site',
     bullets: [
-      'Payments Reliability team. Built an idempotent retry layer that de-duplicates charge attempts across network partitions.',
-      'Cut duplicate-charge incidents to zero in the canary fleet; the path now fronts ~3M requests/day.',
+      'Search Infrastructure team. Building latency-sensitive serving paths that front a large share of daily query traffic.',
+      'Owned an idempotent retry layer that de-duplicates request attempts across network partitions, taking duplicate work to zero in the canary fleet.',
     ],
     skills: ['Go', 'Distributed Systems', 'Idempotency'],
-  },
-  {
-    company: 'Vercel',
-    color: '#111111',
-    logo: <VercelLogo />,
-    role: 'Software Engineer Intern',
-    dates: 'May 2024 – Aug 2024 · 4 mos',
-    place: 'Remote',
-    bullets: [
-      'Edge runtime team. Shipped incremental path-based cache invalidation so revalidating a route drops only its descendants.',
-      'Reduced over-invalidation on a benchmark app by 41%, measured against the previous full-flush behavior.',
-    ],
-    skills: ['TypeScript', 'Edge Functions', 'Caching'],
   },
   {
     company: 'The University of Texas at Austin',
@@ -110,8 +98,8 @@ const STATIC_CERTS = [
 ]
 
 const SKILLS = [
-  { name: 'JavaScript', endorsements: 28, note: 'Stripe · Vercel' },
-  { name: 'TypeScript', endorsements: 24, note: 'Vercel' },
+  { name: 'JavaScript', endorsements: 28, note: 'Google' },
+  { name: 'TypeScript', endorsements: 24, note: 'Google' },
   // note resolved from the live badge count so it never overstates.
   { name: 'Distributed Systems', endorsements: 19, bountyVerified: true },
   { name: 'Data Structures & Algorithms', endorsements: 31, note: 'TA · CS 314' },
@@ -126,17 +114,9 @@ const PEOPLE = [
   { name: 'Sam Okafor', sub: 'Recruiter @ LinkedIn', color: '#0a66c2' },
 ]
 
-export default function ProfilePage({ badges = [], onNavigate }) {
-  // Earned Bounty badges become verified certifications, gold-checked.
-  const bountyCerts = badges.map(b => ({
-    issuer: 'LinkedIn Bounty',
-    company: b.company,
-    color: b.companyColor,
-    name: `${b.company} Bounty · ${b.title}`,
-    meta: `${b.rank ? `Top 10 · #${b.rank}` : b.percentile} · Score ${b.score}/100`,
-    verified: true,
-  }))
-
+export default function ProfilePage({ badges = [], bountyStatus = {}, onNavigate }) {
+  // Only badges that cleared the full review loop count as "verified".
+  const awardedCount = badges.filter(b => isAwarded(bountyStatus[b.id])).length
   return (
     <div className="pf-page">
       <main className="pf-main">
@@ -146,9 +126,9 @@ export default function ProfilePage({ badges = [], onNavigate }) {
         <ActivityCard />
         <ExperienceCard />
         <EducationCard />
-        <VerifiedChallengesCard badges={badges} />
-        <LicensesCard bountyCerts={bountyCerts} onNavigate={onNavigate} />
-        <SkillsCard bountyCount={badges.length} />
+        <VerifiedChallengesCard badges={badges} bountyStatus={bountyStatus} />
+        <LicensesCard />
+        <SkillsCard bountyCount={awardedCount} />
       </main>
 
       <aside className="pf-rail">
@@ -208,8 +188,8 @@ function ProfileHero({ onNavigate }) {
               <span className="pf-entity-name">The University of Texas at Austin</span>
             </button>
             <button className="pf-entity">
-              <span className="pf-entity-logo" style={{ background: '#635bff' }}><StripeLogo /></span>
-              <span className="pf-entity-name">Stripe</span>
+              <span className="pf-entity-logo" style={{ background: '#4285f4' }}><GoogleLogo /></span>
+              <span className="pf-entity-name">Google</span>
             </button>
           </div>
         </div>
@@ -285,7 +265,7 @@ function AboutCard() {
 function ActivityCard() {
   const posts = [
     {
-      text: 'Just cleared the Google "PageSpeed Report Card Tool" bounty (scored 94, Top 8%) and earned a verified badge. Proof-of-work > another line on a resume. The badge is now on my profile. 🔵',
+      text: 'Just submitted my fix for LinkedIn\'s "city-search race condition" bounty — debugged a real out-of-order async race in a live in-browser IDE. No leaderboard score to game: made the top 10, so it\'s now with a recruiter and an engineer for review. If they sign off, the verified badge lands on my profile. Proof-of-work > another line on a resume. 🔵',
       meta: 'Panav posted this · 2d',
       reactions: '212',
       comments: '34 comments',
@@ -392,8 +372,10 @@ function EducationCard() {
   )
 }
 
-/* ── Licenses & certifications (Bounty badges land here) ── */
-function LicensesCard({ bountyCerts, onNavigate }) {
+/* ── Licenses & certifications ──
+   Bounty completions are intentionally NOT shown here — they have their own
+   dedicated "Bounties Completed" section (VerifiedChallengesCard) above. */
+function LicensesCard() {
   return (
     <div className="card pf-card">
       <div className="pf-sec-hdr">
@@ -402,23 +384,6 @@ function LicensesCard({ bountyCerts, onNavigate }) {
       </div>
 
       <div className="pf-entries">
-        {bountyCerts.map((c, i) => (
-          <div className="pf-entry" key={`b-${i}`}>
-            <span className="pf-entry-logo" style={{ background: companyLogoBg(c.company, c.color) }}><CompanyGlyph company={c.company} /></span>
-            <div className="pf-entry-body">
-              <div className="pf-entry-role pf-cert-name">
-                {c.name}
-                <IconShieldCheck size={15} color={GOLD} />
-              </div>
-              <div className="pf-entry-org">{c.issuer}</div>
-              <div className="pf-entry-dates">{c.meta}</div>
-              <button className="pf-cred-btn" onClick={() => onNavigate?.('bounty')}>
-                Show credential <IconShieldCheck size={14} />
-              </button>
-            </div>
-          </div>
-        ))}
-
         {STATIC_CERTS.map((c, i) => (
           <div className="pf-entry" key={`s-${i}`}>
             <span className="pf-entry-logo" style={{ background: c.color }}>
@@ -433,13 +398,6 @@ function LicensesCard({ bountyCerts, onNavigate }) {
           </div>
         ))}
       </div>
-
-      {bountyCerts.length > 0 && (
-        <div className="pf-cert-foot">
-          <IconShieldCheck size={14} color={GOLD} />
-          Verified proof-of-work, earned on LinkedIn Bounty
-        </div>
-      )}
     </div>
   )
 }
@@ -550,22 +508,6 @@ function HdrActions() {
   )
 }
 
-function CompanyGlyph({ company }) {
-  if (company === 'Vercel')   return <VercelLogo />
-  if (company === 'Stripe')   return <StripeLogo />
-  if (company === 'LinkedIn') return <LinkedInLogo />
-  if (company === 'Google')   return <GoogleLogo />
-  if (company === 'Canva')    return <CanvaLogo />
-  if (company === 'Fidelity') return <FidelityLogo />
-  return <span style={{ fontWeight: 800 }}>{company?.[0] ?? '?'}</span>
-}
-
-function companyLogoBg(company, fallback) {
-  if (company === 'Google') return '#fff'
-  if (company === 'Fidelity' || company === 'Canva') return 'transparent'
-  return fallback
-}
-
 function initials(name) {
   const p = name.trim().split(/\s+/)
   return (p[0][0] + (p[1]?.[0] ?? '')).toUpperCase()
@@ -621,23 +563,6 @@ function CoverSkyline() {
   )
 }
 
-function StripeLogo() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff">
-      <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
-    </svg>
-  )
-}
-function VercelLogo() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M12 4l9 16H3L12 4z" /></svg>
-}
-function LinkedInLogo() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff">
-      <path d="M6.94 5a2 2 0 11-4 0 2 2 0 014 0zM7 8.48H3V21h4V8.48zM13.32 8.48H9.34V21h3.94v-6.57c0-3.66 4.77-4 4.77 0V21H22v-7.95c0-6.27-7.06-6.04-8.68-2.96v-1.61z"/>
-    </svg>
-  )
-}
 function GoogleLogo() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24">
@@ -645,38 +570,6 @@ function GoogleLogo() {
       <path d="M12 23c2.97 0 5.46-1 7.28-2.69l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
       <path d="M5.84 14.07c-.22-.66-.35-1.36-.35-2.07s.13-1.41.35-2.07V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l3.66-2.84z" fill="#FBBC05"/>
       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.46 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.84c.87-2.6 3.3-4.55 6.16-4.55z" fill="#EA4335"/>
-    </svg>
-  )
-}
-function CanvaLogo() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="canva-g2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00c4cc"/>
-          <stop offset="100%" stopColor="#7c2ae8"/>
-        </linearGradient>
-      </defs>
-      <circle cx="32" cy="32" r="32" fill="url(#canva-g2)"/>
-      <path fill="#fff" d="M45.6,43.1c-1.7,2.3-3.9,4.7-6.8,6.5c-2.8,1.8-6,3.2-9.8,3.2c-3.5,0-6.4-1.8-8-3.3c-2.4-2.3-3.7-5.6-4.1-8.7c-1.2-9.6,4.7-22.3,13.8-27.8c2.1-1.3,4.4-1.9,6.6-1.9c4.4,0,7.7,3.1,8.1,6.9c0.4,3.4-0.9,6.3-4.7,8.2c-1.9,1-2.9,0.9-3.2,0.5c-0.2-0.3-0.1-0.8,0.3-1.1c3.5-2.9,3.6-5.3,3.2-8.7c-0.3-2.2-1.7-3.6-3.3-3.6c-6.9,0-16.9,15.5-15.5,26.7c0.5,4.4,3.2,9.5,8.8,9.5c1.8,0,3.8-0.5,5.5-1.4c3.9-2,5.6-3.4,7.9-6.6c0.3-0.4,0.6-0.9,0.9-1.3c0.2-0.4,0.6-0.5,0.9-0.5c0.3,0,0.7,0.3,0.7,0.8c0,0.3-0.1,0.9-0.5,1.4C46.3,42.1,46,42.7,45.6,43.1z"/>
-    </svg>
-  )
-}
-function FidelityLogo() {
-  const cx = 50, cy = 50, n = 16, outerR = 43, innerR = 9
-  const pts = Array.from({ length: n * 2 }, (_, i) => {
-    const a = -Math.PI / 2 + (i * Math.PI) / n
-    const r = i % 2 === 0 ? outerR : innerR
-    return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`
-  }).join(' ')
-  return (
-    <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <defs><clipPath id="fid-c2"><circle cx="50" cy="50" r="47"/></clipPath></defs>
-      <circle cx="50" cy="50" r="47" fill="#538234"/>
-      <g clipPath="url(#fid-c2)" fill="#fff">
-        <polygon points={pts}/>
-        <polygon points={`${cx},${cy} ${cx-32},98 ${cx+32},98`}/>
-      </g>
     </svg>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import Navbar from './components/Navbar'
 import ProfileCard from './components/ProfileCard'
@@ -10,18 +10,51 @@ import Puzzles from './components/Puzzles'
 import Footer from './components/Footer'
 import BountyPage from './components/BountyPage'
 import ProfilePage from './components/ProfilePage'
+import {
+  fetchBountyStatus,
+  setBountyStatus as persistBountyStatus,
+  LI_RACE_BOUNTY_ID,
+  REVIEW_STATUS,
+} from './lib/demoUser'
 
-// Seeded so the profile looks credible on first load — the badge is the product.
+// Seeded so the profile looks credible on first load. The badge is the product —
+// but it is NOT verified until the submission clears recruiter + engineer review.
+// Panav has submitted the LinkedIn city-search bounty and is "in review". Its id
+// is the shared LI_RACE_BOUNTY_ID so the recruiter dashboard, the candidate
+// submission, and this profile entry all key off the same DB status.
 const SEED_BADGES = [
-  { id: 'seed-google', company: 'Google', companyColor: '#4285f4', title: 'PageSpeed Report Card Tool', score: 94, percentile: 'Top 8%', rank: null },
+  {
+    id: LI_RACE_BOUNTY_ID,
+    company: 'LinkedIn', companyColor: '#0a66c2',
+    title: 'Fix the city-search race condition', category: 'Engineering', rank: 7,
+  },
 ]
 
 export default function App() {
   const [page, setPage] = useState('home')
   const [badges, setBadges] = useState(SEED_BADGES)
+  // Demo user's per-bounty review status: { '<bounty_id>': '<status>' }.
+  const [bountyStatus, setBountyStatusState] = useState({})
 
-  function earnBadge(badge) {
+  // Load Panav's saved status from the DB once on mount (no-op if unavailable).
+  useEffect(() => {
+    fetchBountyStatus().then(setBountyStatusState)
+  }, [])
+
+  // Recruiter approvals happen in the /recruiter tab and persist to the same DB
+  // row — refetch whenever we open the profile so a freshly-awarded badge shows.
+  useEffect(() => {
+    if (page === 'profile') fetchBountyStatus().then(setBountyStatusState)
+  }, [page])
+
+  // A bounty is submitted (coding → 'in_review') or awarded outright (project
+  // bounties). Adds the badge to the profile and persists the status to the DB.
+  // The badge id IS the DB status key, so the profile pill and the recruiter
+  // dashboard read/write the same row.
+  function earnBadge(badge, status = REVIEW_STATUS.AWARDED) {
     setBadges(prev => (prev.some(b => b.id === badge.id) ? prev : [badge, ...prev]))
+    setBountyStatusState(prev => ({ ...prev, [badge.id]: status }))
+    persistBountyStatus(badge.id, status).then(next => { if (next) setBountyStatusState(next) })
   }
 
   return (
@@ -35,7 +68,7 @@ export default function App() {
 
         {page === 'profile' ? (
           <div className="li-bounty-wrap">
-            <ProfilePage badges={badges} onNavigate={setPage} />
+            <ProfilePage badges={badges} bountyStatus={bountyStatus} onNavigate={setPage} />
           </div>
         ) : page === 'bounty' ? (
           <div className="li-bounty-wrap">

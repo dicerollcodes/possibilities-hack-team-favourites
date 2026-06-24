@@ -1,6 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
 import './RecruiterView.css'
 import { supabase } from '../lib/supabase'
+import {
+  LI_RACE_BOUNTY_ID, REVIEW_STATUS, DEMO_USER_ID, DEMO_USER_NAME,
+  fetchBountyStatus, setBountyStatus, normalizeStatus,
+} from '../lib/demoUser'
+import { runReviewPipeline } from '../lib/aiPipeline'
+
+/* Emily is a recruiter at LinkedIn. She can open her own company's bounties,
+   but not other companies' (their candidate data is private to them). */
+const RECRUITER_COMPANY = 'LinkedIn'
+
+const COMPANY_COLORS = {
+  LinkedIn: '#0a66c2', Google: '#4285f4', 'AI Dynamics': '#7c2ae8',
+  Innovatech: '#059669', FutureWorks: '#e8590c',
+  'Global Solutions LLC': '#538234', 'Tech Innovators Inc.': '#e03e2d', Canva: '#7c2ae8', Fidelity: '#538234',
+}
+const colorFor = (c) => COMPANY_COLORS[c] || '#0a66c2'
 
 const CANDIDATES = [
   { id:1, name:'Alex Chen', school:'UC Berkeley · CS Junior', avatar:'AC', avatarBg:'#0a66c2', score:94, percentile:'Top 8%',
@@ -15,122 +31,205 @@ const CANDIDATES = [
     badges:[{ company:'Fidelity', color:'#538234', task:'DCF valuation model' }] },
 ]
 
-const BOUNTIES = [
-  { id:1, company:'LinkedIn', companyColor:'#0a66c2', title:'Redesign Student Profile UX', category:'Design', desc:'Improve the profile page experience for recent grads. Focus on skills showcase.', submissions:34, deadline:'Jul 12' },
-  { id:2, company:'Canva', companyColor:'#7c2ae8', title:'Gen-Z Social Campaign Templates', category:'Marketing', desc:'Create 5 Canva templates targeting college-age users for back-to-school season.', submissions:21, deadline:'Jul 18' },
-  { id:3, company:'Fidelity', companyColor:'#538234', title:'Retirement Savings Trend Analysis', category:'Finance', desc:'Analyze Gen-Z retirement savings data and produce actionable insights report.', submissions:19, deadline:'Jul 25' },
-  { id:4, company:'Google', companyColor:'#4285f4', title:'URL Shortener with Analytics', category:'Engineering', desc:'Build a URL shortening service with click tracking and geo analytics dashboard.', submissions:12, deadline:'Aug 3' },
+/* Fallback bounties in the LIVE table shape (id/company/description/...), so the
+   demo still works if the network is down. The live DB has no `title`/`status`
+   columns — those are derived in the UI. */
+const FALLBACK_BOUNTIES = [
+  { id:'demo_google', company:'Google', description:'Your task: build a local-first semantic search prototype over a corpus of 500 product-doc snippets using a sentence-transformer model and cosine similarity. Wrap it in a minimal FastAPI + HTML/JS UI.', potential_job_position:'Software Engineer', awardees:[{id:'user_3490'},{id:'user_9883'}] },
+  { id:'demo_aidyn', company:'AI Dynamics', description:'Your task: write a Python script that cross-references job-description keyword frequencies against a course-metadata JSON and outputs a ranked list of topic gaps as a clean CSV.', potential_job_position:'Marketing Specialist', awardees:[{id:'user_4579'}] },
+  { id:'demo_innov', company:'Innovatech', description:'Your task: build a Python tool that auto-generates 10 multiple-choice questions from a chapter excerpt using an NLP technique for distractors, exported as structured JSON.', potential_job_position:'HR Coordinator', awardees:[{id:'user_9435'}] },
 ]
+
+/* The open LinkedIn coding bounty Emily is reviewing — always present in her
+   dashboard (the live DB has no LinkedIn rows of its own). This is the SAME
+   bounty the candidate app exposes (city-search race condition), keyed by the
+   shared LI_RACE_BOUNTY_ID so a review decision here writes back to the
+   candidate's member row and unlocks their badge.
+
+   Panav (our demo submitter, the same person on the candidate /profile) is an
+   awardee with his actual code fix inline in the bounties.awardees jsonb, so the
+   recruiter sees the real submitted work without any download. He carries
+   DEMO_USER_ID so approving him persists to members.bounty_status. */
+const SEED_LINKEDIN_BOUNTY = {
+  id: LI_RACE_BOUNTY_ID,
+  company: RECRUITER_COMPANY,
+  description: 'A real bug from our Search UX backlog. Your task: fix the location type-ahead so the rendered results always match the current input. Typing "london" fast surfaces a classic autocomplete race — shorter queries come back slower, so an earlier keystroke\'s response lands after a later one and overwrites the correct results. Candidates fix it in a live in-browser IDE; AI is allowed. Top 10 come here for recruiter + engineering review.',
+  awardees: [
+    {
+      id: DEMO_USER_ID,
+      name: DEMO_USER_NAME,
+      school: 'UT Austin · CS',
+      avatar: 'PM',
+      avatar_bg: '#0a66c2',
+      score: 96,
+      time: '38m',
+      solution: "Diagnosed the out-of-order async race: every keystroke fired a request and whichever resolved last won, so a slow short-prefix response could clobber the correct one. Fix debounces the input (200ms) and stamps each request with a monotonically increasing id; on resolve, a response whose id isn't the latest is dropped. Net effect: the list always matches the box, and we stop hammering the API on every keystroke. Also added an empty-query guard to clear stale results.",
+      solution_url: 'https://panav-citysearch-fix.linkedbounty.app',
+      solution_lang: 'js',
+      solution_code: `let latestRequestId = 0
+let debounceTimer = null
+
+input.addEventListener('input', (e) => {
+  const query = e.target.value.trim()
+  clearTimeout(debounceTimer)
+  if (!query) { list.innerHTML = ''; status.textContent = ''; return }
+  status.textContent = 'Searching…'
+  debounceTimer = setTimeout(() => runSearch(query), 200)
+})
+
+async function runSearch(query) {
+  const requestId = ++latestRequestId      // claim a sequence number
+  const results = await searchCities(query)
+  if (requestId !== latestRequestId) return // stale response — drop it
+  render(query, results)
+}`,
+    },
+    { id: 'user_4410' },
+    { id: 'user_7793' },
+  ],
+  potential_job_position: 'Software Engineer',
+  potential_job_ids: [],
+  relevant_course_name: 'Async JavaScript & Concurrency',
+  relevant_course_id: 'course_6335',
+}
+
+/* Merge the seeded LinkedIn bounty into a live result set (dedupe by id),
+   keeping LinkedIn's completed pilot pinned to the top. */
+function withLinkedInSeed(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  return list.some(b => b.id === SEED_LINKEDIN_BOUNTY.id)
+    ? list
+    : [SEED_LINKEDIN_BOUNTY, ...list]
+}
 
 const RANK_MEDALS = ['🥇','🥈','🥉']
 const RANK_COLORS = ['#f59e0b','#94a3b8','#b45309','#6b7280','#6b7280']
+const MEDAL_COUNT = 3   // gold / silver / bronze available per bounty
+
+/* derive a short, human title from a live bounty's long description */
+function deriveTitle(b) {
+  const d = b.description || ''
+  const marker = d.indexOf('Your task:')
+  if (marker >= 0) {
+    let t = d.slice(marker + 'Your task:'.length).trim()
+    const end = t.search(/[.;]/)
+    if (end > 0) t = t.slice(0, end)
+    t = t.charAt(0).toUpperCase() + t.slice(1)
+    return t.length > 84 ? t.slice(0, 81) + '…' : t
+  }
+  const first = d.split('.')[0]
+  if (first && first.length < 90) return first
+  return `${b.company} · ${b.potential_job_position || 'Bounty'}`
+}
+
+/* map a raw live-DB bounty row to the shape the UI renders */
+function mapBounty(b) {
+  return {
+    id: b.id,
+    company: b.company,
+    companyColor: colorFor(b.company),
+    title: deriveTitle(b),
+    category: b.potential_job_position || 'General',
+    desc: b.description,
+    submissions: Array.isArray(b.awardees) ? Math.max(b.awardees.length * 9 + 12, 12) : 12,
+    awardees: Array.isArray(b.awardees) ? b.awardees : [],
+    isMine: b.company === RECRUITER_COMPANY,
+  }
+}
+
+const emailFor = (name) =>
+  name.toLowerCase().replace(/[^a-z ]/g, '').trim().split(/\s+/).join('.') + '@gmail.com'
 
 export default function RecruiterView() {
-  const [screen, setScreen] = useState('scanning') // scanning | home | leaderboard | bounties | post | profile
-  const [scanCount, setScanCount] = useState(0)
-  const [selected, setSelected] = useState(null)
+  const [screen, setScreen] = useState('home') // home | leaderboard | bounties | post | profile | bountyboard
+  const [selected, setSelected] = useState(null)         // candidate (profile)
+  const [selectedBounty, setSelectedBounty] = useState(null)
 
-  useEffect(() => {
-    if (screen !== 'scanning') return
-    const iv = setInterval(() => setScanCount(c => { const n = c + Math.floor(Math.random()*32+10); return n>=1247?1247:n }), 70)
-    return () => clearInterval(iv)
-  }, [screen])
+  // ── global LinkedIn-style messaging dock ──
+  const [msgOpen, setMsgOpen] = useState(false)
+  const [msgRecipient, setMsgRecipient] = useState(null)
+  const [threads, setThreads] = useState({}) // name -> [{ from:'me'|'them', text }]
 
-  useEffect(() => {
-    const t = setTimeout(() => setScreen('home'), 2600)
-    return () => clearTimeout(t)
-  }, [])
+  const openMessage = (candidate) => {
+    setMsgRecipient(candidate)
+    setMsgOpen(true)
+    setThreads(prev => prev[candidate.name] ? prev : {
+      ...prev,
+      [candidate.name]: [{ from: 'them', text: `Hi! Thanks for checking out my bounty work. Happy to chat about opportunities at ${RECRUITER_COMPANY}.` }],
+    })
+  }
+  const sendMessage = (name, text) => {
+    setThreads(prev => ({ ...prev, [name]: [...(prev[name] || []), { from: 'me', text }] }))
+  }
 
-  const nav = (s, candidate=null) => { setSelected(candidate); setScreen(s) }
+  const goHome = () => setScreen('home')
+  const openProfile = (candidate) => { setSelected(candidate); setScreen('profile') }
+  const openBountyBoard = (bounty) => { setSelectedBounty(bounty); setScreen('bountyboard') }
 
   return (
     <div className="rv-page">
-      <RvNav>
-        {screen !== 'scanning' && screen !== 'home' && (
-          <button className="rv-back-btn" onClick={() => setScreen('home')}>← Home</button>
-        )}
-      </RvNav>
+      <RvNav />
 
-      {screen === 'scanning' && <ScanningView scanCount={scanCount}/>}
-      {screen === 'home'      && <HomeView onNav={nav}/>}
-      {screen === 'leaderboard' && <LeaderboardView onProfile={c => nav('profile', c)}/>}
-      {screen === 'bounties'    && <BountiesView onPost={() => nav('post')}/>}
-      {screen === 'post'        && <PostBountyView onDone={() => nav('bounties')}/>}
-      {screen === 'profile' && selected && <ProfileView candidate={selected} onBack={() => nav('leaderboard')}/>}
+      {screen === 'home'        && <HomeView onNav={setScreen} />}
+      {screen === 'leaderboard' && <LeaderboardView onHome={goHome} onProfile={openProfile} />}
+      {screen === 'bounties'    && <BountiesView onHome={goHome} onOpenBounty={openBountyBoard} />}
+      {screen === 'post'        && <PostBountyView onHome={goHome} onDone={() => setScreen('bounties')} />}
+      {screen === 'profile' && selected && (
+        <ProfileView candidate={selected} onBack={() => setScreen('leaderboard')} onMessage={openMessage} />
+      )}
+      {screen === 'bountyboard' && selectedBounty && (
+        <BountyBoardView bounty={selectedBounty} onBack={() => setScreen('bounties')} onMessage={openMessage} />
+      )}
+
+      <MessagingDock
+        open={msgOpen}
+        recipient={msgRecipient}
+        threads={threads}
+        onToggle={() => setMsgOpen(o => !o)}
+        onSend={sendMessage}
+        onPickRecipient={setMsgRecipient}
+      />
     </div>
   )
 }
 
-/* ─── SCANNING ─── */
-function ScanningView({ scanCount }) {
-  return (
-    <div className="rv-body rv-center">
-      <div className="rv-search-card">
-        <div className="rv-radar-wrap">
-          <div className="rv-radar-ring r1"/><div className="rv-radar-ring r2"/><div className="rv-radar-ring r3"/>
-          <div className="rv-radar-core">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0a66c2" strokeWidth="2.2" strokeLinecap="round">
-              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-            </svg>
-          </div>
-        </div>
-        <h2 className="rv-search-title">Scanning LinkedIn Bounties</h2>
-        <p className="rv-search-sub">Finding students who completed real company bounties and ranking by verified AI score</p>
-        <div className="rv-count-row">
-          <span className="rv-count-num">{scanCount.toLocaleString()}</span>
-          <span className="rv-count-label">/ 1,247 submissions scanned</span>
-        </div>
-        <div className="rv-scan-track"><div className="rv-scan-fill" style={{width:`${(scanCount/1247)*100}%`}}/></div>
-        <div className="rv-co-chips">
-          {['LinkedIn','Google','Canva','Fidelity','HubSpot','Adobe'].map((c,i)=>(
-            <span key={c} className="rv-co-chip" style={{animationDelay:`${i*0.18}s`}}>{c}</span>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+/* small inline back-to-home button, sits to the LEFT of each subpage title */
+function HomeBtn({ onClick, label = '← Home' }) {
+  return <button className="rv-home-inline" onClick={onClick}>{label}</button>
+}
+
+/* Company-specific stats, computed from this recruiter's own bounties. */
+function computeCompanyStats(mine) {
+  const bountyCount = mine.length
+  const submissions = mine.reduce((sum, b) => sum + (b.submissions || 0), 0)
+  const badges = mine.reduce((sum, b) => sum + (b.awardees?.length || 0), 0)
+  return { bounties: bountyCount, submissions, badges, hires: 6 + badges }
 }
 
 /* ─── HOME ─── */
 function HomeView({ onNav }) {
-  const [stats, setStats] = useState({ bounties: 4, submissions: 86, candidates: 1247, badges: 312 })
-  const [topCandidates, setTopCandidates] = useState(CANDIDATES.slice(0, 3))
-  const [topBounties, setTopBounties] = useState(BOUNTIES.slice(0, 3))
+  // Start from the seeded completed LinkedIn bounty so stats are never empty.
+  const [mineBounties, setMineBounties] = useState(() =>
+    withLinkedInSeed([]).filter(b => b.company === RECRUITER_COMPANY).map(mapBounty)
+  )
+  const [topCandidates] = useState(CANDIDATES.slice(0, 3))
 
   useEffect(() => {
-    // Fetch live counts
-    Promise.all([
-      supabase.from('bounties').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('submissions').select('id', { count: 'exact', head: true }),
-      supabase.from('candidates').select('id', { count: 'exact', head: true }),
-      supabase.from('candidate_badges').select('id', { count: 'exact', head: true }),
-    ]).then(([b, s, c, ba]) => {
-      setStats({
-        bounties: b.count ?? 4,
-        submissions: s.count ?? 86,
-        candidates: c.count ?? 1247,
-        badges: ba.count ?? 312,
-      })
-    }).catch(() => {})
-
-    // Fetch top 3 candidates for preview
-    supabase.from('candidates').select('*').order('score', { ascending: false }).limit(3)
+    supabase.from('bounties').select('*').limit(100)
       .then(({ data }) => {
-        if (data?.length) setTopCandidates(data.map(c => ({ id: c.id, name: c.name, avatar: c.avatar, avatarBg: c.avatar_bg, score: c.score })))
-      }).catch(() => {})
-
-    // Fetch top 3 bounties for preview
-    supabase.from('bounties').select('id,title,company_color,submissions_count').eq('status', 'active').order('submissions_count', { ascending: false }).limit(3)
-      .then(({ data }) => {
-        if (data?.length) setTopBounties(data.map(b => ({ id: b.id, title: b.title, companyColor: b.company_color, submissions: b.submissions_count })))
+        const merged = withLinkedInSeed(data?.length ? data : [])
+        setMineBounties(merged.filter(b => b.company === RECRUITER_COMPANY).map(mapBounty))
       }).catch(() => {})
   }, [])
 
+  const stats = computeCompanyStats(mineBounties)
+  const topBounties = mineBounties.slice(0, 3)
+
   const statCards = [
-    { label: 'Active Bounties', value: stats.bounties.toLocaleString(), icon: '📋', color: '#0a66c2' },
-    { label: 'Total Submissions', value: stats.submissions.toLocaleString(), icon: '📥', color: '#7c2ae8' },
-    { label: 'Candidates Ranked', value: stats.candidates.toLocaleString(), icon: '🏆', color: '#f59e0b' },
+    { label: `${RECRUITER_COMPANY} Bounties`, value: stats.bounties.toLocaleString(), icon: '📋', color: '#0a66c2' },
+    { label: 'Submissions', value: stats.submissions.toLocaleString(), icon: '📥', color: '#f59e0b' },
     { label: 'Badges Awarded', value: stats.badges.toLocaleString(), icon: '⭐', color: '#059669' },
+    { label: 'Interviews Booked', value: stats.hires.toLocaleString(), icon: '📅', color: '#7c2ae8' },
   ]
 
   return (
@@ -138,12 +237,11 @@ function HomeView({ onNav }) {
       <div className="rv-home-hero">
         <div>
           <h1 className="rv-home-title">Welcome back, Emily</h1>
-          <p className="rv-home-sub">Here's what's happening with your LinkedIn Bounties today.</p>
+          <p className="rv-home-sub">Here's what's happening with your {RECRUITER_COMPANY} Bounties today.</p>
         </div>
         <button className="rv-home-post-btn" onClick={() => onNav('post')}>+ Post a Bounty</button>
       </div>
 
-      {/* stats */}
       <div className="rv-stats-row">
         {statCards.map((s,i)=>(
           <div key={s.label} className="rv-stat-card" style={{animationDelay:`${i*0.06}s`}}>
@@ -156,9 +254,7 @@ function HomeView({ onNav }) {
         ))}
       </div>
 
-      {/* section cards */}
-      <div className="rv-home-cards">
-
+      <div className="rv-home-cards rv-home-cards-2">
         <button className="rv-home-card" onClick={() => onNav('leaderboard')}>
           <div className="rv-hcard-top">
             <span className="rv-hcard-icon">🏆</span>
@@ -183,7 +279,7 @@ function HomeView({ onNav }) {
             <span className="rv-hcard-arrow">→</span>
           </div>
           <div className="rv-hcard-title">Active Bounties</div>
-          <div className="rv-hcard-desc">Open company tasks accepting student submissions</div>
+          <div className="rv-hcard-desc">Company tasks accepting student submissions</div>
           <div className="rv-hcard-divider"/>
           {topBounties.map(b=>(
             <div key={b.id} className="rv-hcard-row">
@@ -193,30 +289,13 @@ function HomeView({ onNav }) {
             </div>
           ))}
         </button>
-
-        <button className="rv-home-card" onClick={() => onNav('post')}>
-          <div className="rv-hcard-top">
-            <span className="rv-hcard-icon">✏️</span>
-            <span className="rv-hcard-arrow">→</span>
-          </div>
-          <div className="rv-hcard-title">Post a Bounty</div>
-          <div className="rv-hcard-desc">Turn a backlog task into a student challenge</div>
-          <div className="rv-hcard-divider"/>
-          {['Describe your task','Set deadline & type','Students compete','AI scores & ranks'].map((s,i)=>(
-            <div key={i} className="rv-hcard-row">
-              <div className="rv-step-num">{i+1}</div>
-              <span className="rv-hcard-name">{s}</span>
-            </div>
-          ))}
-        </button>
-
       </div>
     </div>
   )
 }
 
-/* ─── LEADERBOARD ─── */
-function LeaderboardView({ onProfile }) {
+/* ─── CANDIDATE LEADERBOARD ─── */
+function LeaderboardView({ onHome, onProfile }) {
   const [candidates, setCandidates] = useState(null)
   const [visibleCards, setVisibleCards] = useState(new Set())
   const [sorted, setSorted] = useState(false)
@@ -229,13 +308,8 @@ function LeaderboardView({ onProfile }) {
       .then(({ data, error }) => {
         if (!error && data?.length) {
           setCandidates(data.map(c => ({
-            id: c.id,
-            name: c.name,
-            school: c.school,
-            avatar: c.avatar,
-            avatarBg: c.avatar_bg,
-            score: c.score,
-            percentile: c.percentile,
+            id: c.id, name: c.name, school: c.school, avatar: c.avatar, avatarBg: c.avatar_bg,
+            score: c.score, percentile: c.percentile,
             badges: (c.candidate_badges || []).map(b => ({ company: b.company, color: b.company_color, task: b.task })),
           })))
         } else {
@@ -260,13 +334,15 @@ function LeaderboardView({ onProfile }) {
     <div className="rv-body">
       <div className="rv-lb-wrap">
         <div className="rv-lb-hdr">
-          <div>
-            <h2 className="rv-lb-title">🏆 Candidate Leaderboard</h2>
-            <p className="rv-lb-sub">Students ranked by verified LinkedIn Bounty score across all companies</p>
+          <div className="rv-lb-hdr-left">
+            <HomeBtn onClick={onHome} />
+            <div>
+              <h2 className="rv-lb-title">🏆 Candidate Leaderboard</h2>
+              <p className="rv-lb-sub">Students ranked by verified LinkedIn Bounty score across all companies</p>
+            </div>
           </div>
-          <span className="rv-ai-chip">⭐ AI-Ranked</span>
         </div>
-        {!candidates && <div style={{textAlign:'center',padding:'40px',color:'#6b6b6b'}}>Loading candidates…</div>}
+        {!candidates && <div className="rv-loading">Loading candidates…</div>}
         <div className={`rv-list${sorted?' rv-list-sorted':''}`}>
           {(candidates||[]).map((c,idx)=>{
             const visible = visibleCards.has(idx)
@@ -306,80 +382,77 @@ function LeaderboardView({ onProfile }) {
   )
 }
 
-const RECRUITER_COMPANY = 'LinkedIn'
-
 /* ─── BOUNTIES ─── */
-function BountiesView({ onPost }) {
-  const [bounties, setBounties] = useState(BOUNTIES)
+function BountiesView({ onHome, onOpenBounty }) {
+  // Seed the completed LinkedIn bounty so it's there before/without any DB call.
+  const [bounties, setBounties] = useState(withLinkedInSeed(FALLBACK_BOUNTIES).map(mapBounty))
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // 'all' | 'mine'
+  const [showAdd, setShowAdd] = useState(false)
+  const [locked, setLocked] = useState(null) // company name we just blocked, for toast
 
-  useEffect(() => {
+  const load = () => {
     supabase
       .from('bounties')
       .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
+      .limit(100)
       .then(({ data, error }) => {
-        if (!error && data?.length) {
-          setBounties(data.map(b => ({
-            id: b.id,
-            company: b.company,
-            companyColor: b.company_color,
-            title: b.title,
-            category: b.category,
-            desc: b.description,
-            submissions: b.submissions_count,
-            deadline: b.deadline ? new Date(b.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—',
-          })))
-        }
+        if (!error && data?.length) setBounties(withLinkedInSeed(data).map(mapBounty))
         setLoading(false)
       })
-  }, [])
+      .catch(() => setLoading(false))
+  }
+  useEffect(load, [])
 
   const displayed = filter === 'mine'
-    ? bounties.filter(b => b.company === RECRUITER_COMPANY)
+    ? bounties.filter(b => b.isMine)
     : bounties
+
+  const handleOpen = (b) => {
+    if (b.isMine) { onOpenBounty(b) }
+    else { setLocked(b.company); setTimeout(() => setLocked(null), 2600) }
+  }
 
   return (
     <div className="rv-body">
       <div className="rv-lb-wrap">
         <div className="rv-lb-hdr">
-          <div>
-            <h2 className="rv-lb-title">📋 Active Bounties</h2>
-            <p className="rv-lb-sub">Company tasks open for student submissions</p>
+          <div className="rv-lb-hdr-left">
+            <HomeBtn onClick={onHome} />
+            <div>
+              <h2 className="rv-lb-title">📋 Active Bounties</h2>
+              <p className="rv-lb-sub">Company tasks open for student submissions. You can open <strong>{RECRUITER_COMPANY}</strong> bounties.</p>
+            </div>
           </div>
-          <button className="rv-post-inline-btn" onClick={onPost}>+ Post New</button>
         </div>
 
         <div className="rv-filter-row">
-          <button
-            className={`rv-filter-btn${filter === 'all' ? ' active' : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            All Bounties
-          </button>
-          <button
-            className={`rv-filter-btn${filter === 'mine' ? ' active' : ''}`}
-            onClick={() => setFilter('mine')}
-          >
-            My Bounties
-          </button>
+          <button className={`rv-filter-btn${filter === 'all' ? ' active' : ''}`} onClick={() => setFilter('all')}>All Bounties</button>
+          <button className={`rv-filter-btn${filter === 'mine' ? ' active' : ''}`} onClick={() => setFilter('mine')}>My Bounties ({RECRUITER_COMPANY})</button>
+          <button className="rv-add-li-btn" onClick={() => setShowAdd(true)}>+ Add LinkedIn Bounty</button>
         </div>
 
+        {locked && <div className="rv-lock-toast">🔒 {locked} bounties are private to {locked} recruiters. You can only open {RECRUITER_COMPANY} bounties.</div>}
+
         {loading ? (
-          <div style={{textAlign:'center',padding:'40px',color:'#6b6b6b'}}>Loading bounties…</div>
+          <div className="rv-loading">Loading bounties…</div>
         ) : displayed.length === 0 ? (
-          <div style={{textAlign:'center',padding:'40px',color:'#6b6b6b'}}>
-            No bounties found. <button className="rv-post-inline-btn" style={{marginLeft:8}} onClick={onPost}>Post one →</button>
+          <div className="rv-loading">
+            No {filter === 'mine' ? RECRUITER_COMPANY + ' ' : ''}bounties yet.
+            <button className="rv-post-inline-btn" style={{marginLeft:8}} onClick={() => setShowAdd(true)}>Add one →</button>
           </div>
         ) : (
           <div className="rv-bounty-list">
             {displayed.map((b,i)=>(
-              <div key={b.id} className="rv-bounty-card" style={{animationDelay:`${i*0.08}s`}}>
+              <div
+                key={b.id}
+                className={`rv-bounty-card${b.isMine ? ' rv-bounty-open' : ' rv-bounty-locked'}`}
+                style={{animationDelay:`${i*0.06}s`}}
+                onClick={() => handleOpen(b)}
+              >
                 <div className="rv-bounty-hdr">
                   <div className="rv-bounty-co" style={{background:b.companyColor}}>{b.company[0]}</div>
-                  <div style={{flex:1}}>
+                  <div style={{flex:1, minWidth:0}}>
                     <div className="rv-bounty-co-name" style={{color:b.companyColor}}>{b.company}</div>
                     <div className="rv-bounty-title">{b.title}</div>
                   </div>
@@ -388,43 +461,101 @@ function BountiesView({ onPost }) {
                 <p className="rv-bounty-desc">{b.desc}</p>
                 <div className="rv-bounty-footer">
                   <span className="rv-bounty-meta">📥 {b.submissions} submissions</span>
-                  <span className="rv-bounty-meta">🗓 Due {b.deadline}</span>
-                  <span className="rv-bounty-status">● Active</span>
+                  {b.isMine
+                    ? <span className="rv-bounty-open-cta">View leaderboard →</span>
+                    : <span className="rv-bounty-lock">🔒 {b.company} only</span>}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {showAdd && <AddLinkedInBountyModal onClose={() => setShowAdd(false)} onAdded={() => { setShowAdd(false); setFilter('mine'); setLoading(true); load() }} />}
+    </div>
+  )
+}
+
+/* Modal: Emily adds a completed LinkedIn bounty straight into the live DB.
+   Uses the REAL live-table columns (no title/status columns exist). */
+function AddLinkedInBountyModal({ onClose, onAdded }) {
+  const [task, setTask] = useState('Redesign the student profile page to better showcase verified bounty badges to recruiters.')
+  const [position, setPosition] = useState('Product Designer')
+  const [course, setCourse] = useState('UX/UI Design')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState(null)
+
+  const submit = async () => {
+    setSaving(true); setErr(null)
+    const row = {
+      id: `bounty_li_${Date.now()}`,
+      company: RECRUITER_COMPANY,
+      description: `LinkedIn ran this internal bounty as a completed pilot. Your task: ${task}`,
+      awardees: [{ id: 'user_8821' }, { id: 'user_4410' }, { id: 'user_7793' }],
+      potential_job_position: position,
+      potential_job_ids: [],
+      relevant_course_name: course,
+      relevant_course_id: `course_${Math.floor(1000 + (course.length * 137) % 9000)}`,
+    }
+    const { error } = await supabase.from('bounties').insert(row)
+    setSaving(false)
+    if (error) { setErr(error.message || 'Could not save — check your connection.'); return }
+    onAdded()
+  }
+
+  return (
+    <div className="rv-modal-overlay" onClick={onClose}>
+      <div className="rv-modal" onClick={e => e.stopPropagation()}>
+        <div className="rv-modal-hdr">
+          <h3 className="rv-modal-title">Add a completed LinkedIn bounty</h3>
+          <button className="rv-modal-x" onClick={onClose}>✕</button>
+        </div>
+        <p className="rv-modal-sub">This writes a <strong>completed</strong> bounty to the live database under <strong>{RECRUITER_COMPANY}</strong>, with awardees already attached.</p>
+        <label className="rv-label">The task</label>
+        <textarea className="rv-textarea" rows={3} value={task} onChange={e => setTask(e.target.value)} />
+        <div className="rv-form-row" style={{marginTop:14}}>
+          <div className="rv-field" style={{marginBottom:0}}>
+            <label className="rv-label">Potential role</label>
+            <input className="rv-input" value={position} onChange={e => setPosition(e.target.value)} />
+          </div>
+          <div className="rv-field" style={{marginBottom:0}}>
+            <label className="rv-label">Relevant course</label>
+            <input className="rv-input" value={course} onChange={e => setCourse(e.target.value)} />
+          </div>
+        </div>
+        {err && <div className="rv-modal-err">{err}</div>}
+        <div className="rv-modal-actions">
+          <button className="rp-btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="rv-post-btn" style={{flex:1.4, opacity: saving ? 0.6 : 1}} disabled={saving} onClick={submit}>
+            {saving ? 'Adding…' : 'Add completed bounty →'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
 
 /* ─── POST BOUNTY ─── */
-function PostBountyView({ onDone }) {
-  const [form, setForm] = useState({company:'',title:'',category:'Engineering',desc:'',submitType:'github',deadline:''})
+function PostBountyView({ onHome, onDone }) {
+  const [form, setForm] = useState({company:RECRUITER_COMPANY,title:'',category:'Engineering',desc:'',submitType:'github',deadline:''})
   const [posted, setPosted] = useState(false)
   const [posting, setPosting] = useState(false)
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
-  const canPost = form.company && form.title && form.desc && form.deadline && !posting
+  const canPost = form.company && form.title && form.desc && !posting
 
   const handlePost = async () => {
     setPosting(true)
     try {
+      // write in the LIVE table shape
       await supabase.from('bounties').insert({
         id: `bounty_${Date.now()}`,
         company: form.company,
-        company_color: '#0a66c2',
-        title: form.title,
-        category: form.category,
-        description: form.desc,
-        submission_type: form.submitType,
-        deadline: form.deadline,
-        submissions_count: 0,
-        status: 'active',
-        potential_job_position: form.category,
+        description: `Your task: ${form.desc}`,
         awardees: [],
+        potential_job_position: form.category,
         potential_job_ids: [],
+        relevant_course_name: form.title,
+        relevant_course_id: `course_${Date.now() % 10000}`,
       })
     } catch (_) {}
     setPosting(false)
@@ -439,7 +570,7 @@ function PostBountyView({ onDone }) {
         <p className="rv-posted-sub"><strong>{form.title}</strong> from <strong>{form.company}</strong> is now live. Students can discover and submit for AI-verified badges.</p>
         <div className="rv-posted-info">
           <span>📂 {form.category}</span>
-          <span>🗓 Due {form.deadline}</span>
+          {form.deadline && <span>🗓 Due {form.deadline}</span>}
         </div>
         <button className="rv-post-btn" onClick={onDone}>← Back to Bounties</button>
       </div>
@@ -449,7 +580,10 @@ function PostBountyView({ onDone }) {
   return (
     <div className="rv-body">
       <div className="rv-post-wrap">
-        <h2 className="rv-lb-title">Post a Bounty</h2>
+        <div className="rv-lb-hdr-left" style={{marginBottom:8}}>
+          <HomeBtn onClick={onHome} />
+          <h2 className="rv-lb-title">Post a Bounty</h2>
+        </div>
         <p className="rv-lb-sub" style={{marginBottom:24}}>Turn your company's backlog into a student opportunity. Submissions are AI-scored and top performers earn a verified badge.</p>
         <div className="rv-form">
           <div className="rv-form-row">
@@ -480,7 +614,7 @@ function PostBountyView({ onDone }) {
               </select>
             </div>
             <div className="rv-field">
-              <label className="rv-label">Deadline <span className="rv-req">*</span></label>
+              <label className="rv-label">Deadline</label>
               <input className="rv-input" type="date" value={form.deadline} onChange={e=>set('deadline',e.target.value)}/>
             </div>
           </div>
@@ -499,11 +633,478 @@ function PostBountyView({ onDone }) {
 
 const SUBMIT_LABELS = { github:'GitHub Repo', figma:'Figma / Image Link', excel:'Excel / PDF Report', campaign:'Campaign Plan (Slides)', email:'Written Outreach', dashboard:'Data Dashboard', presentation:'Presentation Deck' }
 
-/* ─── PROFILE ─── */
-function ProfileView({ candidate, onBack }) {
-  const rank = candidate.rank ?? 1
+/* ─── BOUNTY MEDAL LEADERBOARD (per-company bounty) ───
+   Engineering submissions for the city-search race-condition bounty. Each is a
+   distinct, plausible approach so the recruiter has a real spread to judge. */
+const BOUNTY_POOL = [
+  { id:'p1',  name:'Aisha Nwosu',     school:'MIT · CS Senior',          avatar:'AN', avatarBg:'#0a66c2', score:98, time:'31m', solution:'Used AbortController: each keystroke aborts the in-flight fetch before starting the next, so a stale response can never resolve. Debounced at 150ms. Clean, idiomatic, and exactly how you\'d ship it against a real endpoint.' },
+  { id:'p2',  name:'Diego Ramos',     school:'Stanford · CS Junior',     avatar:'DR', avatarBg:'#7c2ae8', score:97, time:'42m', solution:'Monotonic request-id guard plus a 200ms debounce. Drops any response whose id isn\'t the latest. Wrote a short note explaining why latency ordering is not guaranteed. Solid reasoning.' },
+  { id:'p3',  name:'Mei Lin',         school:'CMU · MSCS',               avatar:'ML', avatarBg:'#059669', score:96, time:'29m', solution:'Tracked the latest query string and compared it on resolve — only renders if the response\'s query still equals the box value. Also coalesces identical in-flight queries. Elegant.' },
+  { id:'p4',  name:'Sam Okafor',      school:'GA Tech · CS Senior',      avatar:'SO', avatarBg:'#e8590c', score:95, time:'51m', solution:'AbortController + debounce, with a loading state per request. Correct fix; the abort handling swallowed errors a little too broadly but the race is gone.' },
+  { id:'p5',  name:'Priya Kapoor',    school:'UT Austin · CS Senior',    avatar:'PK', avatarBg:'#e03e2d', score:94, time:'44m', solution:'Sequence-number guard on responses. Clear variable names and a comment block on the race. Didn\'t debounce, so it still fires per keystroke, but results always match the input.' },
+  { id:'p6',  name:'Tomás García',    school:'Berkeley · EECS Junior',   avatar:'TG', avatarBg:'#0a66c2', score:93, time:'58m', solution:'Stored the latest query in a ref and bailed out of render() when it changed. Works, but leans on a closure that\'s easy to break later. Reasoning was good.' },
+  { id:'p7',  name:'Hana Bauer',      school:'UW · CS Senior',           avatar:'HB', avatarBg:'#7c2ae8', score:92, time:'1h 06m', solution:'Promise-token approach: each search captures a token, compares on resolve. Added a tiny test harness that fires three overlapping queries to prove ordering. Nice touch.' },
+  { id:'p8',  name:'Noah Williams',   school:'UIUC · CS Junior',         avatar:'NW', avatarBg:'#059669', score:91, time:'47m', solution:'Debounce only (300ms). Hides the race most of the time by spacing requests out, but a slow response can still clobber — partial fix, honest writeup acknowledging the gap.' },
+  { id:'p9',  name:'Lena Fischer',    school:'NYU · CS Senior',          avatar:'LF', avatarBg:'#e8590c', score:90, time:'1h 02m', solution:'Latest-wins guard via a module-scoped counter, plus clearing results on empty input. Straightforward and correct; minimal comments.' },
+  { id:'p10', name:'Omar Said',       school:'Purdue · CS Senior',       avatar:'OS', avatarBg:'#e03e2d', score:89, time:'1h 19m', solution:'AbortController per request stored in a Map keyed by query. Over-engineered for the problem, but no stale renders and it cancels cleanly.' },
+  { id:'p11', name:'Yuki Tanaka',     school:'UMich · CS Junior',        avatar:'YT', avatarBg:'#0a66c2', score:88, time:'55m', solution:'Request-id guard, no debounce. Conventional and correct. Good baseline candidate if a top pick drops out.' },
+  { id:'p12', name:'Ivan Petrov',     school:'UCSD · CS Senior',         avatar:'IP', avatarBg:'#7c2ae8', score:87, time:'1h 11m', solution:'Compared response query to current input before render. Solid, if light on explanation of why latency varies. Would shine with more reasoning.' },
+  { id:'p13', name:'Grace Kim',       school:'Cornell · CS Junior',      avatar:'GK', avatarBg:'#059669', score:86, time:'1h 28m', solution:'Disabled the input while a request was pending to serialize calls. Eliminates the race but hurts UX — flagged as a trade-off in the writeup.' },
+]
+
+/* every submission gets a live, viewable solution URL (no download needed) */
+const solutionUrlFor = (c) => c.solution_url || `https://linkedbounty.app/s/${c.id}`
+
+/* Build the medal pool for a bounty. Any awardee stored in the DB with a real
+   solution (e.g. Panav on the seeded LinkedIn bounty) is promoted to the top of
+   the pool so the recruiter reviews the actual submitted work first. */
+function makePool(bounty) {
+  const named = (bounty?.awardees || [])
+    .filter(a => a && a.name && a.solution)
+    .map(a => ({
+      id: a.id,
+      name: a.name,
+      school: a.school || 'Candidate',
+      avatar: a.avatar || a.name.split(' ').map(w => w[0]).join('').slice(0, 2),
+      avatarBg: a.avatar_bg || '#0a66c2',
+      score: a.score ?? 95,
+      time: a.time || '—',
+      solution: a.solution,
+      solution_url: a.solution_url,
+    }))
+  const namedIds = new Set(named.map(c => c.id))
+  const filler = BOUNTY_POOL.filter(c => !namedIds.has(c.id)).map(c => ({ ...c }))
+  return [...named, ...filler]
+    .map(c => ({ ...c, solution_url: solutionUrlFor(c) }))
+    .sort((a, b) => b.score - a.score)
+}
+
+// Local board status ↔ DB review status. The board's "pending" (submitted,
+// awaiting the recruiter) is the DB's "in_review".
+const DB_TO_LOCAL = {
+  [REVIEW_STATUS.IN_REVIEW]: 'pending',
+  [REVIEW_STATUS.RECRUITER_OK]: 'recruiter_ok',
+  [REVIEW_STATUS.AWARDED]: 'awarded',
+  [REVIEW_STATUS.DENIED]: 'denied',
+}
+
+function BountyBoardView({ bounty, onBack, onMessage }) {
+  const [pool] = useState(() => makePool(bounty))
+  const [statuses, setStatuses] = useState({}) // id -> pending | recruiter_ok | awarded | denied
+  const [awardOrder, setAwardOrder] = useState([]) // ids in the order medals were finalized
+  const [notified, setNotified] = useState({}) // id -> true (engineer emailed)
+  const [selectedId, setSelectedId] = useState(null)
+
+  // This board's decisions on the demo user persist to the live DB (members
+  // .bounty_status), which the candidate's profile reads. Only the LinkedIn race
+  // bounty is wired to a real member row.
+  const persists = bounty.id === LI_RACE_BOUNTY_ID
+
+  // Seed the demo user's board status from the DB so a fresh load reflects where
+  // his review already stands (e.g. 'in_review' after he submits).
+  useEffect(() => {
+    if (!persists) return
+    fetchBountyStatus().then(map => {
+      const s = normalizeStatus(map[LI_RACE_BOUNTY_ID])
+      const local = s && DB_TO_LOCAL[s]
+      if (!local) return
+      setStatuses(prev => ({ ...prev, [DEMO_USER_ID]: local }))
+      if (local === 'awarded') setAwardOrder(prev => prev.includes(DEMO_USER_ID) ? prev : [...prev, DEMO_USER_ID])
+    })
+  }, [persists])
+
+  const statusOf = (id) => statuses[id] || 'pending'
+  const awardedCount = awardOrder.length
+  const medalsLeft = MEDAL_COUNT - awardedCount
+
+  const active = pool.filter(c => statusOf(c.id) !== 'denied').sort((a,b)=>b.score-a.score)
+  const top10 = active.slice(0, 10)
+  const selected = pool.find(c => c.id === selectedId) || null
+
+  const setStatus = (id, s) => setStatuses(prev => ({ ...prev, [id]: s }))
+
+  // Persist a board decision to the DB when it's the demo user on the wired bounty.
+  const persistFor = (id, dbStatus) => {
+    if (persists && id === DEMO_USER_ID) setBountyStatus(LI_RACE_BOUNTY_ID, dbStatus)
+  }
+
+  const deny = (id) => { setStatus(id, 'denied'); persistFor(id, REVIEW_STATUS.DENIED); setSelectedId(null) }
+  const recruiterApprove = (id) => { setStatus(id, 'recruiter_ok'); persistFor(id, REVIEW_STATUS.RECRUITER_OK) }
+  const engineerApprove = (id) => {
+    if (medalsLeft <= 0) return
+    setStatus(id, 'awarded')
+    setAwardOrder(prev => prev.includes(id) ? prev : [...prev, id])
+    persistFor(id, REVIEW_STATUS.AWARDED)
+  }
+  const notifyEngineer = (id) => setNotified(prev => ({ ...prev, [id]: true }))
+
+  if (selected) {
+    return (
+      <SubmissionDetail
+        bounty={bounty}
+        candidate={selected}
+        status={statusOf(selected.id)}
+        notified={!!notified[selected.id]}
+        medalsLeft={medalsLeft}
+        medalRank={awardOrder.indexOf(selected.id)}
+        onBack={() => setSelectedId(null)}
+        onNotify={() => notifyEngineer(selected.id)}
+        onApprove={() => recruiterApprove(selected.id)}
+        onDeny={() => deny(selected.id)}
+        onEngineerApprove={() => engineerApprove(selected.id)}
+        onMessage={() => onMessage(selected)}
+      />
+    )
+  }
+
   return (
     <div className="rv-body">
+      <div className="rv-lb-wrap">
+        <div className="rv-lb-hdr">
+          <div className="rv-lb-hdr-left">
+            <HomeBtn onClick={onBack} label="← Bounties" />
+            <div>
+              <h2 className="rv-lb-title rv-bd-title">
+                <span className="rv-bd-co" style={{background:bounty.companyColor}}>{bounty.company[0]}</span>
+                {bounty.title}
+              </h2>
+              <p className="rv-lb-sub">Top 10 qualifying for the <strong>{bounty.company} bounty medal</strong> · {bounty.category}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rv-medal-status">
+          <span className="rv-medal-pill">🏅 {medalsLeft} of {MEDAL_COUNT} medals remaining</span>
+          {medalsLeft === 0 && <span className="rv-medal-done">All medals distributed ✓</span>}
+        </div>
+
+        <div className="rv-list rv-list-sorted">
+          {top10.map((c, idx) => {
+            const st = statusOf(c.id)
+            const medalRank = awardOrder.indexOf(c.id)
+            return (
+              <div key={c.id} className={`rv-row rv-row-visible${st==='awarded'?' rv-row-gold':''}`} onClick={() => setSelectedId(c.id)}>
+                <div className="rv-rank">
+                  {idx<3?<span className="rv-medal-emoji">{['🥇','🥈','🥉'][idx]}</span>:<span className="rv-rank-num">#{idx+1}</span>}
+                </div>
+                <div className="rv-av" style={{background:c.avatarBg}}>{c.avatar}</div>
+                <div className="rv-info">
+                  <div className="rv-name">{c.name}</div>
+                  <div className="rv-school">{c.school}</div>
+                  <div className="rv-badges">
+                    <StatusBadge status={st} medalRank={medalRank} />
+                    <span className="rv-time-chip">⏱ {c.time}</span>
+                  </div>
+                </div>
+                <div className="rv-score-col">
+                  <div className="rv-score" style={{color:RANK_COLORS[idx]}}>{c.score}</div>
+                  <div className="rv-pct">bounty score</div>
+                </div>
+                <span className="rv-chevron">›</span>
+              </div>
+            )
+          })}
+        </div>
+        <p className="rv-hint">Click a submission to review the solution, send it to engineering, and approve or deny the medal.</p>
+      </div>
+    </div>
+  )
+}
+
+function StatusBadge({ status, medalRank }) {
+  if (status === 'awarded') {
+    const m = RANK_MEDALS[medalRank] || '🏅'
+    return <span className="rv-st-badge rv-st-awarded">{m} Medal awarded</span>
+  }
+  if (status === 'recruiter_ok') return <span className="rv-st-badge rv-st-pending">⏳ Pending engineering review</span>
+  return <span className="rv-st-badge rv-st-new">● Awaiting review</span>
+}
+
+function SubmissionDetail({ bounty, candidate, status, notified, medalsLeft, medalRank, onBack, onNotify, onApprove, onDeny, onEngineerApprove, onMessage }) {
+  const [email, setEmail] = useState('engineering@linkedin.com')
+  const [reviewing, setReviewing] = useState(false)
+  const [pipelineResult, setPipelineResult] = useState(null)
+  const [grading, setGrading] = useState(false)
+  const c = candidate
+  const solutionUrl = c.solution_url || `https://linkedbounty.app/s/${c.id}`
+  const reviewUrl = `https://review.linkedbounty.app/engineering/${bounty.id}/${c.id}`
+
+  const runGrade = async () => {
+    setGrading(true)
+    const submission = [c.solution_code, c.solution].filter(Boolean).join('\n')
+    const isCoding = !!c.solution_code
+    const result = await runReviewPipeline(bounty, submission, isCoding)
+    setPipelineResult(result)
+    setGrading(false)
+  }
+
+  return (
+    <div className="rv-body">
+      <div className="rv-post-wrap">
+        <div className="rv-lb-hdr-left" style={{marginBottom:16}}>
+          <HomeBtn onClick={onBack} label="← Top 10" />
+          <div>
+            <h2 className="rv-lb-title">{c.name}</h2>
+            <p className="rv-lb-sub">{c.school} · {bounty.company} bounty submission</p>
+          </div>
+        </div>
+
+        <div className="rv-sd-card">
+          <div className="rv-sd-top">
+            <div className="rv-av" style={{background:c.avatarBg}}>{c.avatar}</div>
+            <div style={{flex:1, minWidth:0}}>
+              <div className="rv-sd-name">{c.name}</div>
+              <div className="rv-sd-meta">
+                <span className="rv-sd-score">{pipelineResult ? pipelineResult.score : c.score}<span className="rv-sd-score-sm">/100</span></span>
+                <span className="rv-time-chip">⏱ {c.time} to solve</span>
+                <StatusBadge status={status} medalRank={medalRank} />
+              </div>
+            </div>
+            <button className="rp-btn-secondary rv-sd-msg" onClick={onMessage}>💬 Message</button>
+          </div>
+
+          <div className="rv-sd-section-lbl">📝 Solution summary</div>
+          <p className="rv-sd-solution">{c.solution}</p>
+
+          {/* AI Pipeline re-grade */}
+          <div style={{marginTop:14, padding:'12px 14px', background:'#f3f8ff', borderRadius:8, border:'1px solid #d0e4ff'}}>
+            <div style={{display:'flex', alignItems:'center', gap:10, marginBottom: pipelineResult ? 10 : 0}}>
+              <span style={{fontSize:13, fontWeight:600, color:'#0a66c2'}}>⚡ AI Review Pipeline</span>
+              <button
+                onClick={runGrade}
+                disabled={grading}
+                style={{marginLeft:'auto', padding:'5px 12px', background: grading ? '#aaa' : '#0a66c2', color:'#fff', border:'none', borderRadius:6, fontSize:12, cursor: grading ? 'default' : 'pointer'}}
+              >
+                {grading ? 'Grading…' : pipelineResult ? 'Re-grade' : 'Run pipeline'}
+              </button>
+            </div>
+            {pipelineResult && (
+              <div style={{fontSize:13, color:'#1a1a1a'}}>
+                <div style={{display:'flex', gap:16, marginBottom:6}}>
+                  <span><strong>Score:</strong> {pipelineResult.score}/100</span>
+                  <span><strong>Percentile:</strong> {pipelineResult.percentile}</span>
+                  <span><strong>Method:</strong> {pipelineResult.method}</span>
+                  {pipelineResult.agents?.A?.source && (
+                    <span style={{color:'#6b6b6b'}}>Agent A: {pipelineResult.agents.A.score} · Agent B: {pipelineResult.agents.B.score}</span>
+                  )}
+                </div>
+                <div style={{color:'#444'}}>{pipelineResult.feedback}</div>
+                {pipelineResult.note && <div style={{marginTop:4, color:'#b45309', fontSize:12}}>⚠ {pipelineResult.note}</div>}
+                {pipelineResult.safety?.flags?.length > 0 && (
+                  <div style={{marginTop:4, color:'#dc2626', fontSize:12}}>
+                    Safety flags: {pipelineResult.safety.flags.map(f => f.type).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Live, inline preview of the submitted work — no download. */}
+          <div className="rv-sd-section-lbl">🖥 Live submission</div>
+          <SolutionPreview candidate={c} url={solutionUrl} />
+          <div className="rv-sd-files">
+            <a className="rv-sd-file" href={solutionUrl} target="_blank" rel="noreferrer">🔗 {solutionUrl.replace('https://','')}</a>
+            <span className="rv-sd-file rv-sd-file-muted">Opens in-app · nothing to download</span>
+          </div>
+        </div>
+
+        {/* ── Sub-section 1: send to engineer for approval ── */}
+        <div className="rv-sd-card">
+          <div className="rv-sd-section-lbl">①  Send to engineer for approval</div>
+          <p className="rv-sd-help">Loop in an engineer to verify the technical quality. They get a link to the engineering review portal — no download, the submission renders right there.</p>
+          <div className="rv-sd-email-row">
+            <input className="rv-input" style={{flex:1}} value={email} onChange={e=>setEmail(e.target.value)} placeholder="engineer@linkedin.com" />
+            <button className={`rv-sd-send${notified?' sent':''}`} onClick={onNotify} disabled={notified}>
+              {notified ? '✓ Sent' : 'Send →'}
+            </button>
+          </div>
+          {notified && (
+            <div className="rv-sd-review-link">
+              <div className="rv-sd-sent-note">✓ Sent to <strong>{email}</strong>. They'll open the review portal:</div>
+              <div className="rv-sd-review-row">
+                <code className="rv-sd-review-url">{reviewUrl}</code>
+                <button className="rv-sd-review-open" onClick={() => setReviewing(true)}>Preview portal →</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Sub-section 2: recruiter approve / deny + engineering finalize ── */}
+        <div className="rv-sd-card">
+          <div className="rv-sd-section-lbl">②  Recruiter decision</div>
+
+          {status === 'pending' && (
+            <>
+              <p className="rv-sd-help">Approve to advance this candidate to engineering review, or deny to drop them — the next-ranked student (#11) moves into the top 10.</p>
+              <div className="rv-sd-decide">
+                <button className="rv-sd-approve" onClick={onApprove}>✓ Approve solution</button>
+                <button className="rv-sd-deny" onClick={onDeny}>✕ Deny</button>
+              </div>
+            </>
+          )}
+
+          {status === 'recruiter_ok' && (
+            <>
+              <div className="rv-sd-pending-banner">⏳ You approved this candidate. <strong>Pending engineering review.</strong></div>
+              {medalsLeft > 0 ? (
+                <>
+                  <p className="rv-sd-help">Engineering verifies the work, then finalizes the medal. (Demo: act as the engineer to finalize.)</p>
+                  <div className="rv-sd-decide">
+                    <button className="rv-sd-approve" onClick={onEngineerApprove}>🏅 Approve as engineer — award medal</button>
+                    <button className="rv-sd-deny" onClick={onDeny}>✕ Engineer denies</button>
+                  </div>
+                </>
+              ) : (
+                <div className="rv-sd-pending-banner">All {MEDAL_COUNT} medals have already been distributed for this bounty.</div>
+              )}
+            </>
+          )}
+
+          {status === 'awarded' && (
+            <div className="rv-sd-awarded-banner">
+              {RANK_MEDALS[medalRank] || '🏅'} <strong>Medal awarded.</strong> {c.name} passed both recruiter and engineering review and now holds the {bounty.company} bounty medal.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {reviewing && (
+        <EngineeringReviewModal
+          bounty={bounty}
+          candidate={c}
+          reviewUrl={reviewUrl}
+          solutionUrl={solutionUrl}
+          canFinalize={status === 'recruiter_ok' && medalsLeft > 0}
+          onClose={() => setReviewing(false)}
+          onApprove={() => { onEngineerApprove(); setReviewing(false) }}
+          onDeny={() => { onDeny(); setReviewing(false) }}
+        />
+      )}
+    </div>
+  )
+}
+
+/* Inline preview of a submitted solution — a mock browser/editor frame so the
+   recruiter (and engineer) see the actual work, never a download. Coding
+   submissions (solution_code present) render the candidate's diff; others fall
+   back to a rendered deliverable mock. */
+function SolutionPreview({ candidate, url }) {
+  const c = candidate
+  if (c.solution_code) {
+    return (
+      <div className="rv-prev">
+        <div className="rv-prev-bar">
+          <span className="rv-prev-dot" style={{background:'#ff5f57'}}/>
+          <span className="rv-prev-dot" style={{background:'#febc2e'}}/>
+          <span className="rv-prev-dot" style={{background:'#28c840'}}/>
+          <span className="rv-prev-url">app.js · {url.replace('https://','')}</span>
+          <a className="rv-prev-open" href={url} target="_blank" rel="noreferrer">Open ↗</a>
+        </div>
+        <pre className="rv-prev-code"><code>{c.solution_code}</code></pre>
+      </div>
+    )
+  }
+  return (
+    <div className="rv-prev">
+      <div className="rv-prev-bar">
+        <span className="rv-prev-dot" style={{background:'#ff5f57'}}/>
+        <span className="rv-prev-dot" style={{background:'#febc2e'}}/>
+        <span className="rv-prev-dot" style={{background:'#28c840'}}/>
+        <span className="rv-prev-url">{url.replace('https://','')}</span>
+        <a className="rv-prev-open" href={url} target="_blank" rel="noreferrer">Open ↗</a>
+      </div>
+      <div className="rv-prev-body">
+        <div className="rv-prev-cover"/>
+        <div className="rv-prev-row">
+          <div className="rv-prev-av" style={{background:c.avatarBg}}>{c.avatar}</div>
+          <div style={{flex:1, minWidth:0}}>
+            <div className="rv-prev-name">{c.name}</div>
+            <div className="rv-prev-sub">{c.school}</div>
+          </div>
+          <span className="rv-prev-chip">Recruiter mode</span>
+        </div>
+        <div className="rv-prev-badges-lbl">✅ Verified bounty work</div>
+        <div className="rv-prev-badges">
+          <span className="rv-prev-badge">🥇 {RECRUITER_COMPANY} · {c.score}/100</span>
+          <span className="rv-prev-badge">⏱ Solved in {c.time}</span>
+          <span className="rv-prev-badge">🎓 Verified by AI</span>
+        </div>
+        <div className="rv-prev-skeleton"><span style={{width:'92%'}}/><span style={{width:'78%'}}/><span style={{width:'85%'}}/></div>
+      </div>
+    </div>
+  )
+}
+
+/* The mock engineering-review portal the recruiter forwards to an engineer. */
+function EngineeringReviewModal({ bounty, candidate, reviewUrl, solutionUrl, canFinalize, onClose, onApprove, onDeny }) {
+  const c = candidate
+  return (
+    <div className="rv-modal-overlay" onClick={onClose}>
+      <div className="rv-modal rv-modal-wide" onClick={e => e.stopPropagation()}>
+        <div className="rv-eng-topbar">
+          <div className="rv-eng-brand">
+            <span className="rv-eng-logo">⚙️</span>
+            <div>
+              <div className="rv-eng-title">Engineering Review Portal</div>
+              <div className="rv-eng-url">{reviewUrl.replace('https://','')}</div>
+            </div>
+          </div>
+          <button className="rv-modal-x" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="rv-eng-meta">
+          <div className="rv-av" style={{background:c.avatarBg, width:42, height:42, fontSize:14}}>{c.avatar}</div>
+          <div style={{flex:1, minWidth:0}}>
+            <div className="rv-sd-name">{c.name} <span className="rv-eng-pos">· {bounty.company} {bounty.category}</span></div>
+            <div className="rv-sd-meta">
+              <span className="rv-sd-score">{c.score}<span className="rv-sd-score-sm">/100</span></span>
+              <span className="rv-time-chip">⏱ {c.time}</span>
+              <span className="rv-st-badge rv-st-pending">Awaiting engineering sign-off</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rv-eng-task">
+          <span className="rv-eng-task-lbl">Bounty task</span>
+          {bounty.desc}
+        </div>
+
+        <div className="rv-sd-section-lbl">Submitted solution</div>
+        <p className="rv-sd-solution">{c.solution}</p>
+        <SolutionPreview candidate={c} url={solutionUrl} />
+
+        <div className="rv-eng-actions">
+          {canFinalize ? (
+            <>
+              <div className="rv-eng-actions-help">As the reviewing engineer, verify the technical quality and finalize the medal.</div>
+              <div className="rv-sd-decide">
+                <button className="rv-sd-approve" onClick={onApprove}>🏅 Approve — award medal</button>
+                <button className="rv-sd-deny" onClick={onDeny}>✕ Deny submission</button>
+              </div>
+            </>
+          ) : (
+            <div className="rv-sd-pending-banner">
+              The recruiter must approve this candidate before engineering can finalize the medal.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── PROFILE ─── */
+function ProfileView({ candidate, onBack, onMessage }) {
+  const rank = candidate.rank ?? 1
+  const [saved, setSaved] = useState(false)
+  const [scheduling, setScheduling] = useState(false)
+
+  return (
+    <div className="rv-body">
+      <div className="rv-lb-hdr-left rv-profile-top">
+        <HomeBtn onClick={onBack} label="← Leaderboard" />
+        <h2 className="rv-lb-title" style={{fontSize:18}}>Candidate Profile</h2>
+      </div>
       <div className="rp-card">
         <div className="rp-cover">
           <svg width="100%" height="100%" viewBox="0 0 700 120" preserveAspectRatio="xMidYMid slice">
@@ -539,12 +1140,142 @@ function ProfileView({ candidate, onBack }) {
             </div>
           ))}
           <div className="rp-actions">
-            <button className="rp-btn-primary">📅 Schedule Interview</button>
-            <button className="rp-btn-secondary">🔖 Save</button>
-            <button className="rp-btn-secondary">💬 Message</button>
+            <button className="rp-btn-primary" onClick={() => setScheduling(true)}>📅 Schedule Interview</button>
+            <button className={`rp-btn-secondary${saved?' rp-saved':''}`} onClick={() => setSaved(s => !s)}>{saved ? '✓ Saved' : '🔖 Save'}</button>
+            <button className="rp-btn-secondary" onClick={() => onMessage(candidate)}>💬 Message</button>
           </div>
         </div>
       </div>
+
+      {scheduling && <ScheduleInterviewModal candidate={candidate} onClose={() => setScheduling(false)} />}
+    </div>
+  )
+}
+
+/* ─── SCHEDULE INTERVIEW MODAL ─── */
+function ScheduleInterviewModal({ candidate, onClose }) {
+  const email = emailFor(candidate.name)
+  const [body, setBody] = useState(
+    `Hi ${candidate.name.split(' ')[0]},\n\nYour ${candidate.badges?.[0]?.company || 'LinkedIn'} bounty work really stood out to our team. We'd love to set up a short interview to learn more about how you approached it.\n\nAre you available next week? Reply with a few times that work and we'll send a calendar invite.\n\nBest,\nEmily · ${RECRUITER_COMPANY} Recruiting`
+  )
+  const [sent, setSent] = useState(false)
+
+  return (
+    <div className="rv-modal-overlay" onClick={onClose}>
+      <div className="rv-modal" onClick={e => e.stopPropagation()}>
+        {!sent ? (
+          <>
+            <div className="rv-modal-hdr">
+              <h3 className="rv-modal-title">📅 Schedule Interview</h3>
+              <button className="rv-modal-x" onClick={onClose}>✕</button>
+            </div>
+            <div className="rv-modal-to">
+              <span className="rv-modal-to-lbl">To</span>
+              <span className="rv-modal-to-email">{email}</span>
+              <span className="rv-modal-to-src">🔗 via LinkedIn account</span>
+            </div>
+            <label className="rv-label" style={{marginTop:14, display:'block'}}>Your message</label>
+            <textarea className="rv-textarea" rows={9} value={body} onChange={e => setBody(e.target.value)} />
+            <div className="rv-modal-actions">
+              <button className="rp-btn-secondary" onClick={onClose}>Cancel</button>
+              <button className="rv-post-btn" style={{flex:1.4}} onClick={() => setSent(true)}>Send email →</button>
+            </div>
+          </>
+        ) : (
+          <div className="rv-modal-sent">
+            <div className="rv-posted-icon">📨</div>
+            <h3 className="rv-modal-title">Interview request sent</h3>
+            <p className="rv-modal-sub">Your message is on its way to <strong>{email}</strong>. You'll be notified when {candidate.name.split(' ')[0]} replies with availability.</p>
+            <button className="rv-post-btn" onClick={onClose}>Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ─── MESSAGING DOCK (LinkedIn-style, bottom-right) ─── */
+function MessagingDock({ open, recipient, threads, onToggle, onSend, onPickRecipient }) {
+  const [draft, setDraft] = useState('')
+  const listRef = useRef(null)
+  const thread = recipient ? (threads[recipient.name] || []) : []
+  const names = Object.keys(threads)
+
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
+  }, [thread.length, open, recipient])
+
+  const submit = () => {
+    const t = draft.trim()
+    if (!t || !recipient) return
+    onSend(recipient.name, t)
+    setDraft('')
+  }
+
+  if (!open) {
+    return (
+      <button className="rv-msg-bar" onClick={onToggle}>
+        <span className="rv-msg-bar-icon">💬</span>
+        <span className="rv-msg-bar-title">Messaging</span>
+        {names.length > 0 && <span className="rv-msg-bar-count">{names.length}</span>}
+        <span className="rv-msg-bar-caret">▴</span>
+      </button>
+    )
+  }
+
+  return (
+    <div className="rv-msg-panel">
+      <div className="rv-msg-head" onClick={onToggle}>
+        <span className="rv-msg-bar-icon">💬</span>
+        <span className="rv-msg-bar-title">Messaging</span>
+        <span className="rv-msg-bar-caret">▾</span>
+      </div>
+
+      {recipient ? (
+        <>
+          <div className="rv-msg-recipient">
+            <div className="rv-msg-av" style={{background:recipient.avatarBg||'#0a66c2'}}>{recipient.avatar}</div>
+            <div style={{minWidth:0}}>
+              <div className="rv-msg-rname">{recipient.name}</div>
+              <div className="rv-msg-rsub">{recipient.school || 'Candidate'}</div>
+            </div>
+            {names.length > 1 && <button className="rv-msg-back" onClick={() => onPickRecipient(null)} title="All conversations">☰</button>}
+          </div>
+          <div className="rv-msg-thread" ref={listRef}>
+            {thread.length === 0 && <div className="rv-msg-empty">Start the conversation with {recipient.name.split(' ')[0]}.</div>}
+            {thread.map((m,i)=>(
+              <div key={i} className={`rv-msg-bubble ${m.from === 'me' ? 'me' : 'them'}`}>{m.text}</div>
+            ))}
+          </div>
+          <div className="rv-msg-compose">
+            <input
+              className="rv-msg-input"
+              placeholder={`Message ${recipient.name.split(' ')[0]}…`}
+              value={draft}
+              onChange={e=>setDraft(e.target.value)}
+              onKeyDown={e=>{ if(e.key==='Enter') submit() }}
+            />
+            <button className="rv-msg-send" onClick={submit} disabled={!draft.trim()}>Send</button>
+          </div>
+        </>
+      ) : (
+        <div className="rv-msg-list">
+          {names.length === 0
+            ? <div className="rv-msg-empty">No conversations yet. Open a candidate and hit <strong>Message</strong> to start one.</div>
+            : names.map(n => {
+                const last = threads[n][threads[n].length-1]
+                return (
+                  <button key={n} className="rv-msg-list-item" onClick={() => onPickRecipient({ name: n, avatar: n.split(' ').map(w=>w[0]).join('').slice(0,2) })}>
+                    <div className="rv-msg-av" style={{background:'#0a66c2'}}>{n.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+                    <div style={{minWidth:0}}>
+                      <div className="rv-msg-rname">{n}</div>
+                      <div className="rv-msg-preview">{last?.text}</div>
+                    </div>
+                  </button>
+                )
+              })}
+        </div>
+      )}
     </div>
   )
 }
@@ -564,7 +1295,7 @@ function ScoreCounter({ target, active, color }) {
 }
 
 /* ─── NAV ─── */
-function RvNav({ children }) {
+function RvNav() {
   return (
     <div className="rv-nav">
       <div className="rv-nav-inner">
@@ -576,7 +1307,6 @@ function RvNav({ children }) {
           <span className="rv-logo-text">Recruiter</span>
           <span className="rv-logo-tag">Bounty Dashboard</span>
         </div>
-        {children}
         <div className="rv-av-sm" style={{marginLeft:'auto'}}>HR</div>
       </div>
     </div>
