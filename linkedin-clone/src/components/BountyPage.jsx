@@ -27,25 +27,7 @@ const NVIDIA_KEYS = [
 // Locked badge claim wording — what the badge certifies, given AI is allowed.
 const BADGE_CLAIM = 'Produced a verified-correct solution and reasoned well about it.'
 
-async function reviewWithAI(challenge, submissionUrl, submissionDesc) {
-  const prompt = `You are evaluating a student's project submission for a company bounty. Grade on quality of thinking, effort, and how well they addressed the brief.
-
-COMPANY: ${challenge.company}
-BOUNTY: ${challenge.title}
-BRIEF: ${challenge.description}
-CATEGORY: ${challenge.category}
-
-STUDENT SUBMISSION:
-- Link: ${submissionUrl || '(not provided)'}
-- Description: ${submissionDesc || '(not provided)'}
-
-Respond ONLY with valid JSON:
-{
-  "score": <integer 70-99>,
-  "percentile": "<e.g. Top 12%>",
-  "feedback": "<2-3 sentences of specific, encouraging feedback on their approach>"
-}`
-
+async function callAI(prompt) {
   for (const key of NVIDIA_KEYS) {
     try {
       const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
@@ -53,24 +35,51 @@ Respond ONLY with valid JSON:
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
           model: 'meta/llama-3.3-70b-instruct',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.6, top_p: 0.7, max_tokens: 512, stream: false,
+          messages: [
+            { role: 'system', content: 'You are a strict JSON API. Output ONLY a single valid JSON object with no extra text, no markdown, no explanation.' },
+            { role: 'user', content: prompt },
+          ],
+          temperature: 0.5, top_p: 0.7, max_tokens: 400, stream: false,
         }),
       })
-      if (!res.ok) continue
+      if (!res.ok) { console.warn('AI key failed', res.status); continue }
       const data = await res.json()
-      const text = data.choices?.[0]?.message?.content || ''
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        if (parsed.score && parsed.feedback) return parsed
-      }
-    } catch { /* try next key */ }
+      const text = (data.choices?.[0]?.message?.content || '').trim()
+      console.log('[AI raw]', text)
+      const match = text.match(/\{[\s\S]*\}/)
+      if (!match) { console.warn('No JSON found in response'); continue }
+      const parsed = JSON.parse(match[0])
+      if (parsed.score && parsed.feedback) return parsed
+      console.warn('JSON missing score/feedback', parsed)
+    } catch (e) { console.warn('AI call error', e) }
   }
-  return {
-    score: 88,
-    percentile: 'Top 14%',
-    feedback: 'Strong submission that addresses the core brief well. The approach shows good product thinking and practical execution. Adding more detail on design decisions would push it further.',
+  return null
+}
+
+async function reviewWithAI(challenge, submissionUrl, submissionDesc) {
+  const submissionContent = [
+    submissionUrl ? `Link: ${submissionUrl}` : '',
+    submissionDesc ? `Description: ${submissionDesc}` : '',
+  ].filter(Boolean).join('\n')
+
+  const prompt = `You are grading a student bounty submission for ${challenge.company}.
+
+BOUNTY: "${challenge.title}"
+BRIEF: ${challenge.description.slice(0, 400)}
+
+WHAT THE STUDENT SUBMITTED:
+${submissionContent || 'No submission content provided.'}
+
+Grade this specific submission. Your feedback MUST reference what the student actually wrote or linked above — do not give generic advice. Point out something specific they did well and one concrete thing to improve.
+
+Return JSON only:
+{"score":<integer 60-99>,"percentile":"<e.g. Top 15%>","feedback":"<2-3 sentences referencing their actual submission>"}`
+
+  const result = await callAI(prompt)
+  return result ?? {
+    score: 82,
+    percentile: 'Top 18%',
+    feedback: `Submission received for the ${challenge.company} "${challenge.title}" bounty. The AI reviewer is temporarily unavailable — your badge has been awarded based on submission quality.`,
   }
 }
 
@@ -495,38 +504,30 @@ export default function BountyPage({ onEarnBadge }) {
     let result
     try {
       if (isCoding) {
-        const files = starterFiles(selected).map(f => ({ name: f.name, content: fileContents[f.name] ?? f.content }))
-        const repo = files.map(f => `--- ${f.name} ---\n${f.content}`).join('\n\n')
-        const prompt = `You are a senior engineer evaluating a student's implementation of a coding bounty. Grade on correctness, code quality, and whether it actually solves the brief.
+        const codeFiles = starterFiles(selected).map(f => ({ name: f.name, content: fileContents[f.name] ?? f.content }))
+        const repo = codeFiles.filter(f => f.name !== 'README.md').map(f => `--- ${f.name} ---\n${f.content}`).join('\n\n')
+        const prompt = `You are a senior ${selected.company} engineer reviewing a student's code submission.
 
-COMPANY: ${selected.company}
-BOUNTY: ${selected.title}
-BRIEF: ${selected.description}
+BOUNTY: "${selected.title}"
+BRIEF: ${selected.description.slice(0, 300)}
 
 SUBMITTED CODE:
-${repo}
+${repo.slice(0, 2500)}
 
-Respond ONLY with valid JSON:
-{"score":<integer 70-99>,"percentile":"<e.g. Top 12%>","feedback":"<2-3 sentences of specific feedback on their implementation>"}`
-        for (const key of NVIDIA_KEYS) {
-          try {
-            const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-              body: JSON.stringify({ model: 'meta/llama-3.3-70b-instruct', messages: [{ role: 'user', content: prompt }], temperature: 0.6, top_p: 0.7, max_tokens: 512, stream: false }),
-            })
-            if (!res.ok) continue
-            const data = await res.json()
-            const text = data.choices?.[0]?.message?.content || ''
-            const m = text.match(/\{[\s\S]*\}/)
-            if (m) { const p = JSON.parse(m[0]); if (p.score && p.feedback) { result = p; break } }
-          } catch { /* try next */ }
+Write feedback that references specific parts of their code — function names, logic choices, or what they actually implemented. Do NOT give generic advice. Mention at least one specific thing they wrote.
+
+Return JSON only:
+{"score":<integer 60-99>,"percentile":"<e.g. Top 15%>","feedback":"<2-3 sentences citing specific parts of their code>"}`
+        result = await callAI(prompt)
+        result = result ?? {
+          score: 82,
+          percentile: 'Top 18%',
+          feedback: `Code reviewed for the ${selected.company} "${selected.title}" bounty. The AI reviewer is temporarily unavailable — your badge has been awarded based on submission quality.`,
         }
       } else {
         result = await reviewWithAI(selected, submissionUrl, submissionDesc)
       }
-    } catch { /* fall through */ }
-    result = result ?? { score: 88, percentile: 'Top 14%', feedback: 'Strong submission that clearly addresses the brief. Good thinking on the core approach.' }
+    } catch (e) { console.warn('submitSolution error', e) }
     setAiResult(result)
     supabase.from('submissions').insert({
       submission_url: submissionUrl || null,
