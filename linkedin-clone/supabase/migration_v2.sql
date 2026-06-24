@@ -80,9 +80,19 @@ SELECT * FROM (VALUES
   ('demo_linkedin',  'LinkedIn',  '#0a66c2', 'Redesign Student Profile UX',            'Design',      'Improve the profile page experience for recent grads. Focus on skills showcase and first-job storytelling.',          'figma',  '2026-07-12'::date, 34, 'active', 'Product Designer',    '[]'::jsonb, '[]'::jsonb),
   ('demo_canva',     'Canva',     '#7c2ae8', 'Gen-Z Social Campaign Templates',        'Marketing',   'Create 5 Canva templates targeting college-age users for the back-to-school season. Must feel native to TikTok/IG.', 'figma',  '2026-07-18'::date, 21, 'active', 'Marketing Specialist', '[]'::jsonb, '[]'::jsonb),
   ('demo_fidelity',  'Fidelity',  '#538234', 'Retirement Savings Trend Analysis',      'Finance',     'Analyze Gen-Z retirement savings data and produce an actionable insights report with visualizations.',               'excel',  '2026-07-25'::date, 19, 'active', 'Financial Analyst',   '[]'::jsonb, '[]'::jsonb),
-  ('demo_google',    'Google',    '#4285f4', 'URL Shortener with Analytics Dashboard', 'Engineering', 'Build a URL shortening service with click tracking and geo analytics. Deploy it publicly.',                          'github', '2026-08-03'::date, 12, 'active', 'Software Engineer',   '[]'::jsonb, '[]'::jsonb)
+  ('demo_google',    'Google',    '#4285f4', 'Fix the city-search race condition',     'Engineering', 'A real bug from our Search UX backlog. Our city type-ahead shows results that do not match the search box: type "london" quickly and the list ends up showing Los Angeles, Lagos, Lima — every city starting with "l" — instead of London. The cause is a classic autocomplete race: shorter queries come back slower, so an earlier keystroke''s response lands after a later one and overwrites the correct results. You get the live, reproducible bug in an in-browser IDE. Diagnose it, fix app.js so the rendered results always match the current input (no stale flicker), and ideally avoid hammering the API on every keystroke. AI assistance and docs are allowed — we grade the fix and your reasoning.', 'github', '2026-08-03'::date, 12, 'active', 'Software Engineer',   '[]'::jsonb, '[]'::jsonb)
 ) AS v(id, company, company_color, title, category, description, submission_type, deadline, submissions_count, status, potential_job_position, awardees, potential_job_ids)
 WHERE NOT EXISTS (SELECT 1 FROM bounties WHERE title = v.title);
+
+-- 4b. Migrate the Google demo bounty to the real SWE debugging ticket.
+-- Safe to re-run: matches the existing demo_google row (or the old title) and
+-- rewrites it in place so an already-seeded DB picks up the new problem.
+UPDATE bounties SET
+  title       = 'Fix the city-search race condition',
+  category    = 'Engineering',
+  description = 'A real bug from our Search UX backlog. Our city type-ahead shows results that do not match the search box: type "london" quickly and the list ends up showing Los Angeles, Lagos, Lima — every city starting with "l" — instead of London. The cause is a classic autocomplete race: shorter queries come back slower, so an earlier keystroke''s response lands after a later one and overwrites the correct results. You get the live, reproducible bug in an in-browser IDE. Diagnose it, fix app.js so the rendered results always match the current input (no stale flicker), and ideally avoid hammering the API on every keystroke. AI assistance and docs are allowed — we grade the fix and your reasoning.',
+  submission_type = 'github'
+WHERE id = 'demo_google' OR title = 'URL Shortener with Analytics Dashboard';
 
 -- 5. SEED candidates + badges (skip if already present)
 
