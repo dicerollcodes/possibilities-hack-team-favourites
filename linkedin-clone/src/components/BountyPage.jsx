@@ -12,11 +12,15 @@ import {
    badge that lives on their profile. AI is allowed; judgment is graded.
 ─────────────────────────────────────────────── */
 
-// Keys come from a gitignored .env.local (VITE_NVIDIA_KEYS=key1,key2) so no
-// credentials live in source. Without them, grading falls back to a cached score.
-const NVIDIA_KEYS = (import.meta.env.VITE_NVIDIA_KEYS || '')
-  .split(',')
-  .map(k => k.trim())
+// Keys come from a gitignored .env.local so no credentials live in source.
+// Supports both schemes: VITE_NVIDIA_KEYS=key1,key2 and VITE_NVIDIA_KEY_1/_2.
+// Without them, grading falls back to a cached score.
+const NVIDIA_KEYS = [
+  ...(import.meta.env.VITE_NVIDIA_KEYS || '').split(','),
+  import.meta.env.VITE_NVIDIA_KEY_1,
+  import.meta.env.VITE_NVIDIA_KEY_2,
+]
+  .map(k => (k || '').trim())
   .filter(Boolean)
 
 // Locked badge claim wording — what the badge certifies, given AI is allowed.

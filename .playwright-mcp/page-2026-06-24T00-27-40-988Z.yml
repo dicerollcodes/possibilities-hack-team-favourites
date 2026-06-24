@@ -1,0 +1,77 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - img [ref=e7]
+      - generic [ref=e10]: Recruiter
+      - generic [ref=e11]: Bounty Dashboard
+    - generic [ref=e39]:
+      - button "🏆 Leaderboard" [ref=e40] [cursor=pointer]
+      - button "+ Post a Bounty" [ref=e41] [cursor=pointer]
+    - generic [ref=e13]: HR
+  - generic [ref=e42]:
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - heading "Top Bounty Completions" [level=2] [ref=e45]
+        - paragraph [ref=e46]: Students ranked by verified LinkedIn Bounty score across all companies
+      - generic [ref=e47]: ⭐ AI-Ranked
+    - generic [ref=e48]:
+      - generic [ref=e50] [cursor=pointer]:
+        - generic [ref=e51]: 🥇
+        - generic [ref=e52]: AC
+        - generic [ref=e53]:
+          - generic [ref=e54]: Alex Chen
+          - generic [ref=e55]: UC Berkeley · CS Junior
+          - generic [ref=e56]:
+            - generic [ref=e57]: LinkedIn
+            - generic [ref=e58]: Fidelity
+        - generic [ref=e59]:
+          - generic [ref=e60]: "94"
+          - generic [ref=e61]: Top 8%
+        - generic [ref=e64]: →
+      - generic [ref=e66] [cursor=pointer]:
+        - generic [ref=e67]: 🥈
+        - generic [ref=e68]: PS
+        - generic [ref=e69]:
+          - generic [ref=e70]: Priya Sharma
+          - generic [ref=e71]: UT Austin · CS Senior
+          - generic [ref=e72]:
+            - generic [ref=e73]: Canva
+            - generic [ref=e74]: Google
+        - generic [ref=e75]:
+          - generic [ref=e76]: "91"
+          - generic [ref=e77]: Top 11%
+        - generic [ref=e80]: →
+      - generic [ref=e82] [cursor=pointer]:
+        - generic [ref=e83]: 🥉
+        - generic [ref=e84]: MJ
+        - generic [ref=e85]:
+          - generic [ref=e86]: Marcus Johnson
+          - generic [ref=e87]: Georgia Tech · CS Senior
+          - generic [ref=e89]: LinkedIn
+        - generic [ref=e90]:
+          - generic [ref=e91]: "88"
+          - generic [ref=e92]: Top 15%
+        - generic [ref=e95]: →
+      - generic [ref=e97] [cursor=pointer]:
+        - generic [ref=e98]: "#4"
+        - generic [ref=e99]: SR
+        - generic [ref=e100]:
+          - generic [ref=e101]: Sofia Rodriguez
+          - generic [ref=e102]: Stanford · CS Sophomore
+          - generic [ref=e104]: Canva
+        - generic [ref=e105]:
+          - generic [ref=e106]: "85"
+          - generic [ref=e107]: Top 20%
+        - generic [ref=e110]: →
+      - generic [ref=e112] [cursor=pointer]:
+        - generic [ref=e113]: "#5"
+        - generic [ref=e114]: DK
+        - generic [ref=e115]:
+          - generic [ref=e116]: David Kim
+          - generic [ref=e117]: CMU · CS Junior
+          - generic [ref=e119]: Fidelity
+        - generic [ref=e120]:
+          - generic [ref=e121]: "82"
+          - generic [ref=e122]: Top 24%
+        - generic [ref=e125]: →
+    - paragraph [ref=e126]: Click any candidate to view full profile and verified badges
