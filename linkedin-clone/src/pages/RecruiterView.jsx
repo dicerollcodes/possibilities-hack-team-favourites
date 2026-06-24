@@ -35,6 +35,29 @@ const FALLBACK_BOUNTIES = [
   { id:'demo_innov', company:'Innovatech', description:'Your task: build a Python tool that auto-generates 10 multiple-choice questions from a chapter excerpt using an NLP technique for distractors, exported as structured JSON.', potential_job_position:'HR Coordinator', awardees:[{id:'user_9435'}] },
 ]
 
+/* The completed LinkedIn bounty Emily already ran — always present in her
+   dashboard (the live DB has no LinkedIn rows of its own). Same live-table
+   shape as everything else; deduped by id if it ever lands in the DB too. */
+const SEED_LINKEDIN_BOUNTY = {
+  id: 'bounty_li_completed_pilot',
+  company: RECRUITER_COMPANY,
+  description: 'LinkedIn ran this internal bounty as a completed pilot. Your task: redesign the student profile page to better showcase verified bounty badges to recruiters.',
+  awardees: [{ id: 'user_8821' }, { id: 'user_4410' }, { id: 'user_7793' }],
+  potential_job_position: 'Product Designer',
+  potential_job_ids: [],
+  relevant_course_name: 'UX/UI Design',
+  relevant_course_id: 'course_6335',
+}
+
+/* Merge the seeded LinkedIn bounty into a live result set (dedupe by id),
+   keeping LinkedIn's completed pilot pinned to the top. */
+function withLinkedInSeed(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  return list.some(b => b.id === SEED_LINKEDIN_BOUNTY.id)
+    ? list
+    : [SEED_LINKEDIN_BOUNTY, ...list]
+}
+
 const RANK_MEDALS = ['🥇','🥈','🥉']
 const RANK_COLORS = ['#f59e0b','#94a3b8','#b45309','#6b7280','#6b7280']
 const MEDAL_COUNT = 3   // gold / silver / bronze available per bounty
@@ -131,25 +154,36 @@ function HomeBtn({ onClick, label = '← Home' }) {
   return <button className="rv-home-inline" onClick={onClick}>{label}</button>
 }
 
+/* Company-specific stats, computed from this recruiter's own bounties. */
+function computeCompanyStats(mine) {
+  const bountyCount = mine.length
+  const submissions = mine.reduce((sum, b) => sum + (b.submissions || 0), 0)
+  const badges = mine.reduce((sum, b) => sum + (b.awardees?.length || 0), 0)
+  return { bounties: bountyCount, submissions, badges, hires: 6 + badges }
+}
+
 /* ─── HOME ─── */
 function HomeView({ onNav }) {
-  const [stats, setStats] = useState({ bounties: 25, candidates: 1247, badges: 312, hires: 18 })
+  // Start from the seeded completed LinkedIn bounty so stats are never empty.
+  const [mineBounties, setMineBounties] = useState(() =>
+    withLinkedInSeed([]).filter(b => b.company === RECRUITER_COMPANY).map(mapBounty)
+  )
   const [topCandidates] = useState(CANDIDATES.slice(0, 3))
-  const [topBounties, setTopBounties] = useState(FALLBACK_BOUNTIES.slice(0, 3).map(mapBounty))
 
   useEffect(() => {
-    supabase.from('bounties').select('*').limit(50)
+    supabase.from('bounties').select('*').limit(100)
       .then(({ data }) => {
-        if (data?.length) {
-          setStats(s => ({ ...s, bounties: data.length }))
-          setTopBounties(data.slice(0, 3).map(mapBounty))
-        }
+        const merged = withLinkedInSeed(data?.length ? data : [])
+        setMineBounties(merged.filter(b => b.company === RECRUITER_COMPANY).map(mapBounty))
       }).catch(() => {})
   }, [])
 
+  const stats = computeCompanyStats(mineBounties)
+  const topBounties = mineBounties.slice(0, 3)
+
   const statCards = [
-    { label: 'Live Bounties', value: stats.bounties.toLocaleString(), icon: '📋', color: '#0a66c2' },
-    { label: 'Candidates Ranked', value: stats.candidates.toLocaleString(), icon: '🏆', color: '#f59e0b' },
+    { label: `${RECRUITER_COMPANY} Bounties`, value: stats.bounties.toLocaleString(), icon: '📋', color: '#0a66c2' },
+    { label: 'Submissions', value: stats.submissions.toLocaleString(), icon: '📥', color: '#f59e0b' },
     { label: 'Badges Awarded', value: stats.badges.toLocaleString(), icon: '⭐', color: '#059669' },
     { label: 'Interviews Booked', value: stats.hires.toLocaleString(), icon: '📅', color: '#7c2ae8' },
   ]
@@ -159,7 +193,7 @@ function HomeView({ onNav }) {
       <div className="rv-home-hero">
         <div>
           <h1 className="rv-home-title">Welcome back, Emily</h1>
-          <p className="rv-home-sub">Here's what's happening with your LinkedIn Bounties today.</p>
+          <p className="rv-home-sub">Here's what's happening with your {RECRUITER_COMPANY} Bounties today.</p>
         </div>
         <button className="rv-home-post-btn" onClick={() => onNav('post')}>+ Post a Bounty</button>
       </div>
@@ -306,7 +340,8 @@ function LeaderboardView({ onHome, onProfile }) {
 
 /* ─── BOUNTIES ─── */
 function BountiesView({ onHome, onOpenBounty }) {
-  const [bounties, setBounties] = useState(FALLBACK_BOUNTIES.map(mapBounty))
+  // Seed the completed LinkedIn bounty so it's there before/without any DB call.
+  const [bounties, setBounties] = useState(withLinkedInSeed(FALLBACK_BOUNTIES).map(mapBounty))
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // 'all' | 'mine'
   const [showAdd, setShowAdd] = useState(false)
@@ -318,7 +353,7 @@ function BountiesView({ onHome, onOpenBounty }) {
       .select('*')
       .limit(100)
       .then(({ data, error }) => {
-        if (!error && data?.length) setBounties(data.map(mapBounty))
+        if (!error && data?.length) setBounties(withLinkedInSeed(data).map(mapBounty))
         setLoading(false)
       })
       .catch(() => setLoading(false))
