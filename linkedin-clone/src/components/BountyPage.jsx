@@ -690,6 +690,14 @@ function BrowseView({ bounties, onOpen }) {
 /* ── Detail ── */
 function DetailView({ c, onBack, onSolve }) {
   const deadline = c.deadline ? new Date(c.deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—'
+  // Coding bounties are review-gated: no score is shown and the badge is earned
+  // only by making the top 10 AND passing recruiter + engineering review.
+  const isCoding = c.submission_type === 'github'
+  const criteria = isCoding ? CODE_EVAL_CRITERIA : [
+    'Clear, practical output that addresses the brief',
+    'Evidence of your own thinking — not just a template',
+    'A short writeup explaining your decisions',
+  ]
   return (
     <div className="bounty-page">
       <div className="bd-back-bar">
@@ -712,7 +720,7 @@ function DetailView({ c, onBack, onSolve }) {
             <div className="bd-stat-num bd-stat-badge" style={{ color: c.companyColor }}>
               <IconShieldCheck size={20} /> Verified badge
             </div>
-            <div className="bd-stat-lbl">For everyone who submits</div>
+            <div className="bd-stat-lbl">{isCoding ? 'Top 10, after review' : 'For everyone who submits'}</div>
           </div>
           <div className="bd-stat-div" />
           <div className="bd-stat">
@@ -734,11 +742,7 @@ function DetailView({ c, onBack, onSolve }) {
         <div className="bd-section">
           <div className="bd-section-label">What we're looking for</div>
           <ul className="bd-criteria">
-            {[
-              'Clear, practical output that addresses the brief',
-              'Evidence of your own thinking — not just a template',
-              'A short writeup explaining your decisions',
-            ].map((crit, i) => (
+            {criteria.map((crit, i) => (
               <li key={i} className="bd-criterion">
                 <span className="bd-check" style={{ background: c.companyColor }}><IconCheck size={10} strokeWidth={3} /></span>
                 {crit}
@@ -754,14 +758,20 @@ function DetailView({ c, onBack, onSolve }) {
               <IconShieldCheck size={18} />
             </span>
             <span className="bd-submit-lbl">
-              Submit your work link and a short description. LinkedIn Bounty AI reviews it and scores your judgment.
-              Everyone who submits earns a verified {c.company} badge. Top 10 get a warm intro to {c.company}'s recruiters.
+              {isCoding ? (
+                <>Fix the bug in the in-browser IDE, then submit. There's <strong>no public score</strong> — only the
+                top 10 submissions go to a {c.company} recruiter and an engineer for review, and the verified
+                {' '}{c.company} badge is awarded only after both approve.</>
+              ) : (
+                <>Submit your work link and a short description. LinkedIn Bounty AI reviews it and scores your judgment.
+                Everyone who submits earns a verified {c.company} badge. Top 10 get a warm intro to {c.company}'s recruiters.</>
+              )}
             </span>
           </div>
         </div>
 
         <button className="bd-start-btn" style={{ background: c.companyColor }} onClick={onSolve}>
-          Submit my work <IconChevronRight size={16} />
+          {isCoding ? 'Open the IDE' : 'Submit my work'} <IconChevronRight size={16} />
         </button>
       </div>
     </div>

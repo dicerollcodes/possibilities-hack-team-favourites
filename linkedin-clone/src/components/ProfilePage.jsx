@@ -18,7 +18,7 @@ const GOLD = '#8B6914'
 
 const PROFILE = {
   name: 'Panav Mhatre',
-  headline: 'SWE @ Google · CS @ UT Austin · Building proof-of-work hiring',
+  headline: 'Incoming SWE @ Linkedin · CS @ UT Austin',
   location: 'Austin, Texas Metropolitan Area',
   connections: '500+',
   followers: '1,284',
@@ -32,19 +32,6 @@ I think a resume is a weak signal and proof-of-work is a strong one, so I spend 
 }
 
 const EXPERIENCE = [
-  {
-    company: 'Google',
-    color: '#4285f4',
-    logo: <GoogleLogo />,
-    role: 'Software Engineer',
-    dates: 'May 2026 – Present',
-    place: 'Mountain View, CA · On-site',
-    bullets: [
-      'Search Infrastructure team. Building latency-sensitive serving paths that front a large share of daily query traffic.',
-      'Owned an idempotent retry layer that de-duplicates request attempts across network partitions, taking duplicate work to zero in the canary fleet.',
-    ],
-    skills: ['Go', 'Distributed Systems', 'Idempotency'],
-  },
   {
     company: 'The University of Texas at Austin',
     color: '#bf5700',
@@ -403,11 +390,10 @@ function LicensesCard() {
 }
 
 /* ── Skills ── */
-function SkillsCard({ bountyCount = 0 }) {
-  // Resolve the bounty-verified note from the live badge count so it never overstates.
-  const bountyNote = bountyCount > 0
-    ? `Verified by ${bountyCount} Bounty challenge${bountyCount === 1 ? '' : 's'}`
-    : null
+function SkillsCard() {
+  // Hardcoded — no longer derived from a live bounty badge count.
+  const bountyNote = 'Verified by 3 Bounty challenges'
+
   return (
     <div className="card pf-card">
       <div className="pf-sec-hdr">
@@ -418,16 +404,16 @@ function SkillsCard({ bountyCount = 0 }) {
         {SKILLS.map((s) => {
           const note = s.bountyVerified ? bountyNote : s.note
           return (
-          <div className="pf-skill" key={s.name}>
-            <div className="pf-skill-top">
-              <span className="pf-skill-name">{s.name}</span>
-              {note && <span className="pf-skill-note">{note}</span>}
+            <div className="pf-skill" key={s.name}>
+              <div className="pf-skill-top">
+                <span className="pf-skill-name">{s.name}</span>
+                {note && <span className="pf-skill-note">{note}</span>}
+              </div>
+              <div className="pf-skill-end">
+                <IconShieldCheck size={14} color="#6b6b6b" />
+                {s.endorsements} endorsements
+              </div>
             </div>
-            <div className="pf-skill-end">
-              <IconShieldCheck size={14} color="#6b6b6b" />
-              {s.endorsements} endorsements
-            </div>
-          </div>
           )
         })}
       </div>
