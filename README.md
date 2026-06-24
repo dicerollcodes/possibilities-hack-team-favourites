@@ -1,5 +1,9 @@
 # Possibilities Hack — LinkedIn Bounties
 
+**TEAM: Justin, Maia, Fatoumata, Panav, Chloe**
+Presentation: https://canva.link/4ycsouvn7qg0y0h
+
+
 **Proof-of-work hiring, built on top of a LinkedIn clone.**
 
 Resumes are claims. This project replaces the resume line with a *verified badge*:
