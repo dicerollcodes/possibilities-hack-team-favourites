@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { IconCheck, IconArrowLeft, IconFileText, IconPhoto, IconSparkles, IconChevronRight } from '@tabler/icons-react'
 
 const NVIDIA_KEYS = [
-  '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',
-  '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',
-]
+  import.meta.env.VITE_NVIDIA_KEY_1,
+  import.meta.env.VITE_NVIDIA_KEY_2,
+].filter(Boolean)
 
 async function reviewWithAI(bounty, submissionText) {
   const prompt = `You are an expert evaluator for a student bounty platform. A student submitted work for a real company backlog item. Score their submission and give feedback.

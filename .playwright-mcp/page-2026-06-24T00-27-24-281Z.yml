@@ -1,0 +1,21 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - img [ref=e7]
+      - generic [ref=e10]: Recruiter
+      - generic [ref=e11]: Bounty Dashboard
+    - generic [ref=e13]: HR
+  - generic [ref=e16]:
+    - img [ref=e22]
+    - heading "Scanning LinkedIn Bounties" [level=2] [ref=e25]
+    - paragraph [ref=e26]: Finding students who completed real company bounties and ranking by verified score
+    - generic [ref=e27]:
+      - generic [ref=e28]: "0"
+      - generic [ref=e29]: / 1,247 bounty submissions scanned
+    - generic [ref=e31]:
+      - generic [ref=e32]: LinkedIn
+      - generic [ref=e33]: Google
+      - generic [ref=e34]: Canva
+      - generic [ref=e35]: Fidelity
+      - generic [ref=e36]: HubSpot
+      - generic [ref=e37]: Adobe

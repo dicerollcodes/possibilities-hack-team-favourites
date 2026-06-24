@@ -1,0 +1,17 @@
+[     181ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:14335
+[   75666ms] ReferenceError: sorting is not defined
+    at RecruiterView (http://localhost:5174/src/pages/RecruiterView.jsx?t=1782261232151:379:29)
+    at Object.react_stack_bottom_frame (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:12866:12)
+    at renderWithHooks (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:4213:19)
+    at updateFunctionComponent (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:5569:16)
+    at beginWork (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:6140:20)
+    at runWithFiberInDEV (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:851:66)
+    at performUnitOfWork (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:8429:92)
+    at workLoopSync (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:8325:37)
+    at renderRootSync (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:8309:6)
+    at performWorkOnRoot (http://localhost:5174/node_modules/.vite/deps/react-dom_client.js?v=449ee9e5:7994:27)
+[   75666ms] [WARNING] %s
+
+%s
+ An error occurred in the <RecruiterView> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5174/@vite/client:524

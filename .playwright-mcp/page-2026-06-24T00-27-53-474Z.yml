@@ -1,0 +1,53 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - img [ref=e7]
+      - generic [ref=e10]: Recruiter
+      - generic [ref=e11]: Bounty Dashboard
+    - generic [ref=e39]:
+      - button "🏆 Leaderboard" [ref=e40] [cursor=pointer]
+      - button "+ Post a Bounty" [active] [ref=e41] [cursor=pointer]
+    - generic [ref=e13]: HR
+  - generic [ref=e127]:
+    - heading "Post a Bounty" [level=2] [ref=e128]
+    - paragraph [ref=e129]: Turn your company's backlog into a student opportunity. Submissions are scored by AI and top performers earn a verified badge.
+    - generic [ref=e130]:
+      - generic [ref=e131]:
+        - generic [ref=e132]:
+          - generic [ref=e133]: Company Name *
+          - textbox "e.g. Google" [ref=e134]
+        - generic [ref=e135]:
+          - generic [ref=e136]: Category *
+          - combobox [ref=e137]:
+            - option "Engineering" [selected]
+            - option "Data / Analytics"
+            - option "Finance"
+            - option "Marketing"
+            - option "Sales"
+            - option "Design"
+            - option "Operations"
+            - option "Consulting"
+      - generic [ref=e138]:
+        - generic [ref=e139]: Bounty Title *
+        - textbox "e.g. Design a better student onboarding flow" [ref=e140]
+      - generic [ref=e141]:
+        - generic [ref=e142]: What are you asking for? *
+        - textbox "Describe the backlog task. What problem needs solving? What should students build or create?" [ref=e143]
+      - generic [ref=e144]:
+        - generic [ref=e145]:
+          - generic [ref=e146]: Submission Type
+          - combobox [ref=e147]:
+            - option "GitHub Repo" [selected]
+            - option "Figma / Image Link"
+            - option "Excel / PDF Report"
+            - option "Campaign Plan (Slides)"
+            - option "Written Outreach"
+            - option "Data Dashboard"
+            - option "Presentation Deck"
+        - generic [ref=e148]:
+          - generic [ref=e149]: Deadline *
+          - textbox [ref=e150]
+      - generic [ref=e151]:
+        - img [ref=e152]
+        - text: Submissions will be automatically scored by LinkedIn Bounty AI on clarity, creativity, and impact. Top submissions are shared with your team for final review.
+      - button "Post Bounty →" [disabled] [ref=e154]
