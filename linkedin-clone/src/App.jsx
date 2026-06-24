@@ -3,13 +3,13 @@ import './App.css'
 import Navbar from './components/Navbar'
 import ProfileCard from './components/ProfileCard'
 import MyPagesCard from './components/MyPagesCard'
-import VerifiedChallengesCard from './components/VerifiedChallengesCard'
 import StartPost from './components/StartPost'
 import FeedPosts from './components/FeedPosts'
 import LinkedInNews from './components/LinkedInNews'
 import Puzzles from './components/Puzzles'
 import Footer from './components/Footer'
 import BountyPage from './components/BountyPage'
+import ProfilePage from './components/ProfilePage'
 
 // Seeded so the profile looks credible on first load — the badge is the product.
 const SEED_BADGES = [
@@ -29,12 +29,15 @@ export default function App() {
       <Navbar onNavigate={setPage} currentPage={page} />
       <div className="li-body">
         <aside className="li-left">
-          <ProfileCard />
-          <VerifiedChallengesCard badges={badges} />
+          <ProfileCard onNavigate={setPage} />
           <MyPagesCard onNavigate={setPage} currentPage={page} />
         </aside>
 
-        {page === 'bounty' ? (
+        {page === 'profile' ? (
+          <div className="li-bounty-wrap">
+            <ProfilePage badges={badges} onNavigate={setPage} />
+          </div>
+        ) : page === 'bounty' ? (
           <div className="li-bounty-wrap">
             <BountyPage onEarnBadge={earnBadge} />
           </div>

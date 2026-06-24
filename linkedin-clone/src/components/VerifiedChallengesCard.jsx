@@ -1,8 +1,8 @@
 import { IconShieldCheck, IconChevronRight } from '@tabler/icons-react'
 
 /* The product's core artifact: company-tied, verified proof-of-work badges
-   living on the profile, exactly where recruiters already search.
-   Gold verified check (#8B6914) per the design spec. */
+   ("Bounties Completed") living on the profile, exactly where recruiters
+   already search. Gold verified check (#8B6914) per the design spec. */
 
 const GOLD = '#8B6914'
 
@@ -33,7 +33,7 @@ export default function VerifiedChallengesCard({ badges }) {
     <div className="card vc-card">
       <div className="vc-hdr">
         <span className="vc-hdr-title">
-          <IconShieldCheck size={17} color={GOLD} /> Verified Challenges
+          <IconShieldCheck size={17} color={GOLD} /> Bounties Completed
         </span>
         <span className="vc-count">{badges.length}</span>
       </div>

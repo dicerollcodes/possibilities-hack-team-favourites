@@ -736,7 +736,12 @@
   gap: 4px; flex-shrink: 0; text-align: right;
 }
 .bl-reward-num { font-size: 26px; font-weight: 900; color: #000; line-height: 1; }
-.bl-reward-lbl { font-size: 10px; color: #6b6b6b; max-width: 140px; }
+.bl-reward-lbl { font-size: 10px; color: #6b6b6b; max-width: 150px; }
+.bl-badge-anchor {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  font-size: 12px; font-weight: 800; line-height: 1.2; text-align: right; max-width: 150px;
+}
+.bl-badge-anchor svg { margin-bottom: 2px; }
 
 /* ── Detail: stat row ── */
 .bd-stat-row {
@@ -746,6 +751,7 @@
 }
 .bd-stat { display: flex; flex-direction: column; gap: 3px; }
 .bd-stat-num { font-size: 20px; font-weight: 900; color: #000; line-height: 1; }
+.bd-stat-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; }
 .bd-stat-lbl { font-size: 11px; color: #6b6b6b; }
 .bd-stat-div { width: 1px; height: 32px; background: #c8c8c8; }
 .bd-backlog-tag { display: inline-flex; align-items: center; gap: 4px; }
@@ -781,6 +787,35 @@
   display: flex; align-items: flex-start; gap: 8px; margin-top: 24px;
   background: #f4f2ee; border-radius: 8px; padding: 12px 14px;
   font-size: 12.5px; color: #6b6b6b; line-height: 1.55;
+}
+/* IDE = file tree + editor, fills the space right of the problem pane */
+.solve-ide { flex: 1; display: flex; min-width: 0; }
+.solve-tree {
+  width: 210px; flex-shrink: 0; background: #181818;
+  border-right: 1px solid #000; padding: 8px 0; overflow-y: auto;
+}
+.solve-tree-hdr {
+  display: flex; align-items: center; gap: 6px; padding: 6px 14px 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  color: #8a8a8a; font-family: monospace;
+}
+.solve-tree-file {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 14px; background: none; border: none; cursor: pointer;
+  font-size: 12.5px; color: #c8c8c8; text-align: left; font-family: monospace;
+}
+.solve-tree-file:hover { background: #232323; }
+.solve-tree-file.active { background: #2d2d2d; color: #fff; box-shadow: inset 2px 0 0 #0077b6; }
+.solve-tree-name { flex: 1; }
+.solve-tree-lock { color: #6b6b6b; flex-shrink: 0; }
+.solve-file-glyph {
+  width: 18px; height: 16px; border-radius: 3px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 900; letter-spacing: .3px;
+}
+.solve-readonly-tag {
+  display: inline-flex; align-items: center; gap: 3px; margin-left: 10px;
+  font-size: 10px; color: #8a8a8a; background: #1e1e1e; padding: 1px 7px; border-radius: 10px;
 }
 .solve-right { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #1e1e1e; }
 .solve-editor-hdr {
@@ -881,4 +916,246 @@
   .rs-stage { transition: none; }
   .rs-bar-fill { transition: none; }
   .rs-shimmer-num { animation: none; }
+}
+
+/* ─────────────────────────────────────────
+   Profile Page — full member profile clone
+   Lives in the bounty wrap (grid-column 2 / -1)
+───────────────────────────────────────── */
+.pf-page {
+  display: grid; grid-template-columns: 1fr 300px;
+  gap: 24px; align-items: start; min-width: 0;
+}
+.pf-main { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pf-rail { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pf-card { padding: 0; }
+
+/* ── Hero ── */
+.pf-hero { overflow: hidden; }
+.pf-cover { height: 200px; position: relative; background: #0f2744; }
+.pf-cover-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pf-cover-edit {
+  position: absolute; top: 16px; right: 16px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #fff; color: #0a66c2;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.pf-cover-edit:hover { background: #eef3f8; }
+
+.pf-hero-body { padding: 0 24px 20px; position: relative; }
+.pf-av-row { display: flex; align-items: flex-start; justify-content: space-between; }
+.pf-av {
+  width: 152px; height: 152px; border-radius: 50%;
+  border: 4px solid #fff; background: #2d6a9f;
+  margin-top: -76px; overflow: hidden; flex-shrink: 0;
+}
+.pf-av svg { display: block; }
+.pf-edit-btn {
+  width: 40px; height: 40px; border-radius: 50%; margin-top: 16px;
+  color: #6b6b6b; display: flex; align-items: center; justify-content: center;
+}
+.pf-edit-btn:hover { background: #e8e8e8; color: #333; }
+
+.pf-id-grid { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; }
+.pf-id-left { flex: 1; min-width: 0; }
+.pf-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.pf-name { font-size: 24px; font-weight: 700; color: #000; line-height: 1.2; }
+.pf-verified { display: inline-flex; align-items: center; }
+.pf-pronoun { font-size: 14px; color: #6b6b6b; }
+.pf-headline { font-size: 16px; color: #000; margin-top: 4px; line-height: 1.4; }
+.pf-sub { font-size: 14px; color: #6b6b6b; margin-top: 6px; }
+.pf-link { color: #0a66c2; font-weight: 600; cursor: pointer; }
+.pf-link:hover { text-decoration: underline; }
+.pf-link-blue { color: #0a66c2; cursor: pointer; }
+.pf-link-blue:hover { text-decoration: underline; }
+.pf-connections { font-size: 14px; margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pf-dot { color: #6b6b6b; }
+.pf-muted { color: #6b6b6b; }
+
+.pf-actions { display: flex; align-items: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+.pf-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 20px; padding: 7px 16px; font-size: 14px; font-weight: 700;
+  transition: background .15s, box-shadow .15s; white-space: nowrap;
+}
+.pf-btn-primary { background: #0a66c2; color: #fff; }
+.pf-btn-primary:hover { background: #004182; }
+.pf-btn-outline { border: 1.5px solid #0a66c2; color: #0a66c2; }
+.pf-btn-outline:hover { background: #eef3f8; box-shadow: inset 0 0 0 1px #0a66c2; }
+.pf-btn-ghost { border: 1.5px solid #6b6b6b; color: #333; }
+.pf-btn-ghost:hover { background: #e8e8e8; box-shadow: inset 0 0 0 1px #333; }
+.pf-btn-icon { padding: 7px; }
+
+.pf-id-right { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; max-width: 220px; }
+.pf-entity {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px;
+  border-radius: 6px; text-align: left;
+}
+.pf-entity:hover { background: #e8e8e8; }
+.pf-entity-logo {
+  width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.pf-entity-name { font-size: 13px; font-weight: 600; color: #000; line-height: 1.3; }
+
+.pf-open-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 16px; padding: 12px 16px;
+  background: #eef3f8; border-radius: 8px; cursor: pointer;
+}
+.pf-open-banner:hover { background: #e1ebf5; }
+.pf-open-text { display: flex; flex-direction: column; gap: 2px; }
+.pf-open-text strong { font-size: 15px; color: #000; }
+.pf-open-text span { font-size: 13px; color: #0a66c2; font-weight: 600; }
+
+/* ── Section card chrome ── */
+.pf-sec-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 24px 4px;
+}
+.pf-sec-title { font-size: 20px; font-weight: 700; color: #000; }
+.pf-sec-note { font-size: 13px; color: #6b6b6b; margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+.pf-hdr-actions { display: flex; align-items: center; gap: 4px; }
+.pf-icon-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: #333;
+}
+.pf-icon-btn:hover { background: #e8e8e8; }
+.pf-pill-btn {
+  border: 1.5px solid #0a66c2; color: #0a66c2; border-radius: 20px;
+  padding: 5px 16px; font-size: 14px; font-weight: 700;
+}
+.pf-pill-btn:hover { background: #eef3f8; box-shadow: inset 0 0 0 1px #0a66c2; }
+.pf-show-all {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  width: 100%; padding: 14px; font-size: 15px; font-weight: 600;
+  color: #333; border-top: 1px solid #e8e8e8;
+}
+.pf-show-all:hover { background: #e8e8e8; }
+
+/* ── Analytics ── */
+.pf-analytics-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  padding: 12px 24px 16px;
+}
+.pf-analytic { display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 8px; }
+.pf-analytic:hover { background: #e8e8e8; }
+.pf-analytic-ico {
+  width: 40px; height: 40px; border-radius: 50%; background: #eef3f8;
+  display: flex; align-items: center; justify-content: center; color: #0a66c2; flex-shrink: 0;
+}
+.pf-analytic-num { font-size: 14px; color: #000; }
+.pf-analytic-num strong { font-weight: 700; }
+.pf-analytic-sub { font-size: 12px; color: #6b6b6b; margin-top: 2px; line-height: 1.4; }
+
+/* ── About ── */
+.pf-about-text { padding: 4px 24px 20px; font-size: 14px; color: #000; line-height: 1.6; white-space: pre-line; }
+
+/* ── Activity ── */
+.pf-activity-tabs { display: flex; gap: 8px; padding: 8px 24px 12px; }
+.pf-tab {
+  border: 1.5px solid #c8c8c8; color: #6b6b6b; border-radius: 20px;
+  padding: 5px 14px; font-size: 14px; font-weight: 600;
+}
+.pf-tab.active { background: #0a66c2; color: #fff; border-color: #0a66c2; }
+.pf-tab:not(.active):hover { background: #e8e8e8; color: #333; }
+.pf-activity-post { padding: 12px 24px; border-top: 1px solid #e8e8e8; }
+.pf-act-meta { font-size: 12px; color: #6b6b6b; margin-bottom: 6px; }
+.pf-act-text { font-size: 14px; color: #000; line-height: 1.55; }
+.pf-act-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: #6b6b6b; }
+
+/* ── Entries (experience / education / certs) ── */
+.pf-entries { display: flex; flex-direction: column; padding: 4px 0 8px; }
+.pf-entry {
+  display: flex; gap: 14px; padding: 12px 24px;
+}
+.pf-entry + .pf-entry { border-top: 1px solid #f0f0f0; }
+.pf-entry-logo {
+  width: 48px; height: 48px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.pf-entry-body { flex: 1; min-width: 0; }
+.pf-entry-role { font-size: 16px; font-weight: 700; color: #000; line-height: 1.35; }
+.pf-entry-org { font-size: 14px; color: #000; margin-top: 1px; }
+.pf-entry-dates { font-size: 13px; color: #6b6b6b; margin-top: 1px; }
+.pf-entry-place { font-size: 13px; color: #6b6b6b; }
+.pf-entry-detail { font-size: 14px; color: #333; margin-top: 6px; line-height: 1.5; }
+.pf-entry-bullets { list-style: none; margin: 8px 0 0; display: flex; flex-direction: column; gap: 5px; }
+.pf-entry-bullets li { font-size: 14px; color: #333; line-height: 1.5; padding-left: 16px; position: relative; }
+.pf-entry-bullets li::before { content: '•'; position: absolute; left: 2px; color: #6b6b6b; }
+.pf-entry-skills {
+  display: flex; align-items: center; gap: 6px; margin-top: 10px;
+  font-size: 13px; color: #333;
+}
+.pf-cert-name { display: flex; align-items: center; gap: 6px; }
+.pf-cred-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+  border: 1.5px solid #6b6b6b; color: #333; border-radius: 20px;
+  padding: 5px 14px; font-size: 13px; font-weight: 700;
+}
+.pf-cred-btn:hover { background: #e8e8e8; box-shadow: inset 0 0 0 1px #333; }
+.pf-cert-foot {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 11.5px; color: #8B6914; padding: 10px 24px 16px;
+  border-top: 1px solid #f0e3b0; margin-top: 4px;
+}
+
+/* ── Skills ── */
+.pf-skills { display: flex; flex-direction: column; padding: 4px 0; }
+.pf-skill { padding: 12px 24px; }
+.pf-skill + .pf-skill { border-top: 1px solid #f0f0f0; }
+.pf-skill-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pf-skill-name { font-size: 16px; font-weight: 600; color: #000; }
+.pf-skill-note { font-size: 12px; color: #8B6914; background: #fbf3d8; border: 1px solid #ecdca0; border-radius: 20px; padding: 1px 9px; }
+.pf-skill-end { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b6b6b; margin-top: 5px; }
+
+/* ── Right rail ── */
+.pf-rail-card { padding: 16px; }
+.pf-rail-hdr { display: flex; align-items: center; justify-content: space-between; font-size: 16px; font-weight: 700; color: #000; }
+.pf-rail-url { display: block; font-size: 14px; color: #000; margin-top: 6px; word-break: break-all; }
+.pf-rail-url:hover { color: #0a66c2; text-decoration: underline; cursor: pointer; }
+.pf-rail-title { font-size: 16px; font-weight: 700; color: #000; }
+.pf-rail-sub { font-size: 13px; color: #6b6b6b; margin: 2px 0 10px; }
+.pf-person { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid #f0f0f0; }
+.pf-person-av {
+  width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 15px;
+}
+.pf-person-info { flex: 1; min-width: 0; }
+.pf-person-name { font-size: 14px; font-weight: 700; color: #000; }
+.pf-person-sub { font-size: 12px; color: #6b6b6b; line-height: 1.4; margin-bottom: 8px; }
+.pf-connect-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px solid #6b6b6b; color: #333; border-radius: 20px;
+  padding: 4px 14px; font-size: 13px; font-weight: 700;
+}
+.pf-connect-btn:hover { background: #e8e8e8; box-shadow: inset 0 0 0 1px #333; }
+
+.pf-promo { cursor: pointer; }
+.pf-promo-label { font-size: 11px; color: #6b6b6b; margin-bottom: 10px; }
+.pf-promo-body { display: flex; gap: 10px; }
+.pf-promo-ico {
+  width: 40px; height: 40px; border-radius: 8px; background: #fbf3d8; color: #8B6914;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pf-promo-text { font-size: 13px; color: #333; line-height: 1.5; }
+.pf-promo-btn {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  width: 100%; margin-top: 12px; border: 1.5px solid #0a66c2; color: #0a66c2;
+  border-radius: 20px; padding: 7px; font-size: 14px; font-weight: 700;
+}
+.pf-promo-btn:hover { background: #eef3f8; box-shadow: inset 0 0 0 1px #0a66c2; }
+
+.pf-rail-footer { padding: 8px 12px; }
+.pf-foot-links { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.pf-foot-link { font-size: 12px; color: #6b6b6b; cursor: pointer; }
+.pf-foot-link:hover { color: #0a66c2; text-decoration: underline; }
+.pf-foot-brand { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12px; color: #6b6b6b; }
+.pf-foot-logo { background: #0a66c2; color: #fff; font-size: 12px; font-weight: 900; font-style: italic; padding: 1px 5px; border-radius: 3px; }
+
+@media (max-width: 980px) {
+  .pf-page { grid-template-columns: 1fr; }
+  .pf-rail { display: none; }
 }

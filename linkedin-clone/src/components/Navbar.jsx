@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import {
-  IconHome, IconUsers, IconBriefcase, IconTarget, IconMessage2, IconBell,
+  IconHome, IconUsers, IconBriefcase, IconMessage2, IconBell,
   IconSearch, IconGridDots, IconBook, IconChevronDown
 } from '@tabler/icons-react'
 
-// Nav ids that map to a real page in App.jsx
-const PAGE_NAV = { home: 'home', bounty: 'bounty' }
+// Nav ids that map to a real page in App.jsx. Bounties lives in the left
+// sidebar (MyPagesCard), not the top nav.
+const PAGE_NAV = { home: 'home', me: 'profile' }
 
 const NAV_ITEMS = [
   { id: 'home',     label: 'Home',          Icon: IconHome },
   { id: 'network',  label: 'My Network',    Icon: IconUsers },
   { id: 'jobs',     label: 'Jobs',          Icon: IconBriefcase },
-  { id: 'bounty',   label: 'Bounties',      Icon: IconTarget },
   { id: 'messages', label: 'Messaging',     Icon: IconMessage2, badge: 2 },
   { id: 'notifs',   label: 'Notifications', Icon: IconBell },
 ]
@@ -57,8 +57,8 @@ export default function Navbar({ onNavigate, currentPage }) {
           ))}
 
           <button
-            className={`nav-item nav-item-me${active === 'me' ? ' active' : ''}`}
-            onClick={() => setActive('me')}
+            className={`nav-item nav-item-me${isActive('me') ? ' active' : ''}`}
+            onClick={() => handleNav('me')}
           >
             <div className="nav-avatar-sm">PM</div>
             <span className="nav-me-label">

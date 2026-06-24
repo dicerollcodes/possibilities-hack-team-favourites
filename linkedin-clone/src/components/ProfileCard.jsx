@@ -1,4 +1,4 @@
-export default function ProfileCard() {
+export default function ProfileCard({ onNavigate }) {
   return (
     <div className="card profile-card">
       {/* Cover — city skyline */}
@@ -51,7 +51,14 @@ export default function ProfileCard() {
 
       {/* Avatar */}
       <div className="prof-av-wrap">
-        <div className="prof-av">
+        <div
+          className="prof-av"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigate?.('profile')}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onNavigate?.('profile') }}
+          style={{ cursor: 'pointer' }}
+        >
           <svg viewBox="0 0 76 76" width="76" height="76">
             <circle cx="38" cy="38" r="38" fill="#2d6a9f"/>
             <circle cx="38" cy="30" r="14" fill="#a8c8e8"/>
@@ -63,7 +70,7 @@ export default function ProfileCard() {
       {/* Info */}
       <div className="prof-texts">
         <div className="prof-name-row">
-          <span className="prof-name">Panav Mhatre</span>
+          <span className="prof-name" onClick={() => onNavigate?.('profile')}>Panav Mhatre</span>
           <span className="in-bdg">in</span>
         </div>
         <p className="prof-hl">CS @ UT Austin</p>
@@ -71,8 +78,8 @@ export default function ProfileCard() {
       </div>
 
       <div className="prof-school-row">
-        <span className="school-ico">S</span>
-        <span className="prof-school-nm">Stanford University</span>
+        <span className="school-ico">UT</span>
+        <span className="prof-school-nm">The University of Texas at Austin</span>
       </div>
 
       <div className="divider" />

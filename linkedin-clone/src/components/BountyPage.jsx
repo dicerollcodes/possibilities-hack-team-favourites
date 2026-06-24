@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   IconCheck, IconArrowLeft, IconChevronRight, IconSparkles,
   IconClock, IconUsers, IconShieldCheck, IconCode, IconBolt, IconTarget,
+  IconFolder, IconLock,
 } from '@tabler/icons-react'
 
 /* ──────────────────────────────────────────────
@@ -21,7 +22,12 @@ const NVIDIA_KEYS = (import.meta.env.VITE_NVIDIA_KEYS || '')
 // Locked badge claim wording — what the badge certifies, given AI is allowed.
 const BADGE_CLAIM = 'Produced a verified-correct solution and reasoned well about it.'
 
-async function reviewWithAI(challenge, code) {
+// `files` is { name, content }[] — the whole repo the candidate worked in.
+async function reviewWithAI(challenge, files) {
+  const repo = files
+    .map(f => `--- ${f.name} ---\n${f.content}`)
+    .join('\n\n')
+
   const prompt = `You are a senior software engineer evaluating a candidate's solution to a coding challenge on a hiring-signal bounty platform. AI assistance was ALLOWED while solving — grade the candidate on engineering JUDGMENT (correctness, edge-case handling, clarity, and the reasoning evident in the code), NOT on whether they typed it unaided.
 
 CHALLENGE: ${challenge.title}
@@ -33,10 +39,8 @@ ${challenge.prompt}
 ACCEPTANCE CRITERIA:
 ${challenge.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
-CANDIDATE SUBMISSION:
-\`\`\`
-${code}
-\`\`\`
+CANDIDATE REPOSITORY (multiple files; grade the implementation in solution.js against the tests):
+${repo}
 
 Respond ONLY with valid JSON in this exact format:
 {
@@ -96,15 +100,52 @@ const CHALLENGES = [
       'A repeat id is kept again once it falls outside windowMs',
       'Runs in O(n) over the input (no nested scans)',
     ],
-    starterCode: `/**
+    files: [
+      {
+        name: 'solution.js', lang: 'js', editable: true,
+        content: `/**
  * @param {{ id: string, ts: number }[]} posts  // sorted by ts ascending
  * @param {number} windowMs
  * @returns {{ id: string, ts: number }[]}
  */
-function dedupeFeed(posts, windowMs) {
+export function dedupeFeed(posts, windowMs) {
   // Your code here.
 }
 `,
+      },
+      {
+        name: 'feed.test.js', lang: 'js', editable: false,
+        content: `import { dedupeFeed } from './solution.js'
+import assert from 'node:assert/strict'
+
+// A repeat id inside the window is dropped; ordering is preserved.
+const posts = [
+  { id: 'a', ts: 0 },
+  { id: 'b', ts: 100 },
+  { id: 'a', ts: 200 },   // within 1000ms of the first 'a' -> dropped
+  { id: 'a', ts: 1500 },  // outside the window -> kept again
+]
+assert.deepEqual(dedupeFeed(posts, 1000).map(p => p.ts), [0, 100, 1500])
+
+// Hidden suite also covers: empty input, all-unique, windowMs = 0.
+console.log('example tests passed')
+`,
+      },
+      {
+        name: 'README.md', lang: 'md', editable: false,
+        content: `# Rate-Limited Feed Deduplicator
+
+Implement \`dedupeFeed\` in **solution.js**.
+
+- \`solution.js\`  — your implementation (edit this)
+- \`feed.test.js\` — example tests; the full hidden suite runs on submit
+
+\`\`\`bash
+npm test   # run the example tests locally
+\`\`\`
+`,
+      },
+    ],
   },
   {
     id: 2,
@@ -123,16 +164,53 @@ function dedupeFeed(posts, windowMs) {
       'A different key with the same amount charges independently',
       'A conflicting amount on a known key returns the original, not the new one',
     ],
-    starterCode: `/**
+    files: [
+      {
+        name: 'solution.js', lang: 'js', editable: true,
+        content: `/**
  * @param {Map<string, {amount:number, status:string}>} store
  * @param {string} key
  * @param {number} amount
  * @returns {{ amount: number, status: string }}
  */
-function charge(store, key, amount) {
+export function charge(store, key, amount) {
   // Your code here.
 }
 `,
+      },
+      {
+        name: 'charge.test.js', lang: 'js', editable: false,
+        content: `import { charge } from './solution.js'
+import assert from 'node:assert/strict'
+
+const store = new Map()
+const first = charge(store, 'idem_1', 500)
+// Same key, different amount -> original result, no second charge.
+const retry = charge(store, 'idem_1', 999)
+assert.deepEqual(retry, first)
+assert.equal(store.size, 1)
+
+// A different key charges independently.
+charge(store, 'idem_2', 500)
+assert.equal(store.size, 2)
+
+// Hidden suite also covers: concurrent retries, status transitions.
+console.log('example tests passed')
+`,
+      },
+      {
+        name: 'README.md', lang: 'md', editable: false,
+        content: `# Idempotent Payment Retry
+
+Implement \`charge\` in **solution.js**.
+
+- \`solution.js\`   — your implementation (edit this)
+- \`charge.test.js\` — example tests; the full hidden suite runs on submit
+
+A retry with a known key must **never** double-charge.
+`,
+      },
+    ],
   },
   {
     id: 3,
@@ -151,15 +229,52 @@ function charge(store, key, amount) {
       'Leaves sibling and ancestor paths untouched',
       'Returns the count of entries actually removed',
     ],
-    starterCode: `/**
+    files: [
+      {
+        name: 'solution.js', lang: 'js', editable: true,
+        content: `/**
  * @param {Map<string, unknown>} cache
  * @param {string} path  // e.g. "/blog"
  * @returns {number} entries removed
  */
-function invalidate(cache, path) {
+export function invalidate(cache, path) {
   // Your code here.
 }
 `,
+      },
+      {
+        name: 'cache.test.js', lang: 'js', editable: false,
+        content: `import { invalidate } from './solution.js'
+import assert from 'node:assert/strict'
+
+const cache = new Map([
+  ['/blog', 1],
+  ['/blog/post-1', 1],
+  ['/blog/post-2', 1],
+  ['/about', 1],        // sibling -> must survive
+])
+const removed = invalidate(cache, '/blog')
+assert.equal(removed, 3)
+assert.ok(cache.has('/about'))
+assert.ok(!cache.has('/blog/post-1'))
+
+// Hidden suite also covers: trailing slashes, deep nesting, missing path.
+console.log('example tests passed')
+`,
+      },
+      {
+        name: 'README.md', lang: 'md', editable: false,
+        content: `# Incremental Path Cache Invalidation
+
+Implement \`invalidate\` in **solution.js**.
+
+- \`solution.js\`   — your implementation (edit this)
+- \`cache.test.js\` — example tests; the full hidden suite runs on submit
+
+Revalidating a path must drop it and all descendants — but never siblings.
+`,
+      },
+    ],
   },
 ]
 
@@ -201,20 +316,28 @@ const prefersReducedMotion = () =>
 export default function BountyPage({ onEarnBadge }) {
   const [step, setStep] = useState('browse')   // browse | detail | solve | results | awarded
   const [selected, setSelected] = useState(null)
-  const [code, setCode] = useState('')
+  // Working copy of the challenge's repo: filename -> current content.
+  const [fileContents, setFileContents] = useState({})
   const [aiResult, setAiResult] = useState(null)
 
   function openChallenge(c) { setSelected(c); setStep('detail') }
-  function startSolving() { setCode(selected.starterCode); setStep('solve') }
+  function startSolving() {
+    setFileContents(Object.fromEntries(selected.files.map(f => [f.name, f.content])))
+    setStep('solve')
+  }
+  function editFile(name, content) {
+    setFileContents(prev => ({ ...prev, [name]: content }))
+  }
   function resetToBrowse() {
-    setStep('browse'); setSelected(null); setCode(''); setAiResult(null)
+    setStep('browse'); setSelected(null); setFileContents({}); setAiResult(null)
   }
 
   async function submitSolution() {
     setAiResult(null)
     setStep('results')
+    const files = selected.files.map(f => ({ name: f.name, content: fileContents[f.name] ?? f.content }))
     try {
-      const result = await reviewWithAI(selected, code)
+      const result = await reviewWithAI(selected, files)
       setAiResult(result)
     } catch {
       setAiResult({ score: 88, percentile: 'Top 14%', feedback: 'Correct, readable solution that handles the core cases.' })
@@ -223,7 +346,7 @@ export default function BountyPage({ onEarnBadge }) {
 
   if (step === 'browse')  return <BrowseView challenges={CHALLENGES} onOpen={openChallenge} />
   if (step === 'detail')  return <DetailView c={selected} onBack={resetToBrowse} onSolve={startSolving} />
-  if (step === 'solve')   return <SolveView c={selected} code={code} onCode={setCode} onBack={() => setStep('detail')} onSubmit={submitSolution} />
+  if (step === 'solve')   return <SolveView c={selected} fileContents={fileContents} onEdit={editFile} onBack={() => setStep('detail')} onSubmit={submitSolution} />
   if (step === 'results') return <ResultsView c={selected} aiResult={aiResult} onContinue={() => setStep('awarded')} />
   if (step === 'awarded') return <AwardedView c={selected} aiResult={aiResult} onEarnBadge={onEarnBadge} onBack={resetToBrowse} />
   return null
@@ -278,8 +401,11 @@ function BrowseView({ challenges, onOpen }) {
                 </div>
               </div>
               <div className="bl-reward-col">
-                <div className="bl-reward-num">{c.reward}</div>
-                <div className="bl-reward-lbl">prize · badge for all who pass</div>
+                <div className="bl-badge-anchor" style={{ color: c.companyColor }}>
+                  <IconShieldCheck size={26} />
+                  <span>Verified {c.company} badge</span>
+                </div>
+                <div className="bl-reward-lbl">Earned by everyone who passes</div>
                 <button className="bl-open-btn" onClick={(e) => { e.stopPropagation(); onOpen(c) }}>
                   View challenge <IconChevronRight size={15} />
                 </button>
@@ -313,8 +439,10 @@ function DetailView({ c, onBack, onSolve }) {
 
         <div className="bd-stat-row">
           <div className="bd-stat">
-            <div className="bd-stat-num" style={{ color: c.companyColor }}>{c.reward}</div>
-            <div className="bd-stat-lbl">Prize (top 10)</div>
+            <div className="bd-stat-num bd-stat-badge" style={{ color: c.companyColor }}>
+              <IconShieldCheck size={20} /> Verified badge
+            </div>
+            <div className="bd-stat-lbl">For everyone who passes</div>
           </div>
           <div className="bd-stat-div" />
           <div className="bd-stat">
@@ -352,8 +480,8 @@ function DetailView({ c, onBack, onSolve }) {
               <IconShieldCheck size={18} />
             </span>
             <span className="bd-submit-lbl">
-              Clear the hidden-test gate and everyone earns a verified {c.company} badge. The top 10 also
-              get the prize and a warm recruiter intro.
+              Clear the hidden-test gate and everyone earns a verified {c.company} badge on their profile.
+              The top 10 also land on {c.company}'s recruiter shortlist with a warm intro.
             </span>
           </div>
         </div>
@@ -366,10 +494,19 @@ function DetailView({ c, onBack, onSolve }) {
   )
 }
 
-/* ── Solve (full-width sandbox) ── */
-function SolveView({ c, code, onCode, onBack, onSubmit }) {
-  // Must have changed the starter and written something substantive.
-  const canSubmit = code.trim() !== c.starterCode.trim() && code.trim().length > 30
+/* ── Solve (full-width multi-file sandbox) ── */
+function SolveView({ c, fileContents, onEdit, onBack, onSubmit }) {
+  const [activeName, setActiveName] = useState(() => {
+    const firstEditable = c.files.find(f => f.editable) ?? c.files[0]
+    return firstEditable.name
+  })
+  const activeFile = c.files.find(f => f.name === activeName) ?? c.files[0]
+  const activeContent = fileContents[activeName] ?? activeFile.content
+
+  // Submit once any editable file has been changed beyond its starter.
+  const canSubmit = c.files.some(f =>
+    f.editable && (fileContents[f.name] ?? f.content).trim() !== f.content.trim()
+  )
 
   return (
     <div className="solve-screen">
@@ -403,18 +540,41 @@ function SolveView({ c, code, onCode, onBack, onSubmit }) {
           </div>
         </div>
 
-        <div className="solve-right">
-          <div className="solve-editor-hdr">
-            <span className="solve-dot r" /><span className="solve-dot y" /><span className="solve-dot g" />
-            <span className="solve-editor-file">solution.{c.language === 'JavaScript' ? 'js' : 'ts'}</span>
+        <div className="solve-ide">
+          {/* File tree */}
+          <div className="solve-tree">
+            <div className="solve-tree-hdr"><IconFolder size={14} /> {c.repoName ?? `${c.company.toLowerCase()}-bounty`}</div>
+            {c.files.map(f => (
+              <button
+                key={f.name}
+                className={`solve-tree-file${f.name === activeName ? ' active' : ''}`}
+                onClick={() => setActiveName(f.name)}
+              >
+                <FileGlyph lang={f.lang} />
+                <span className="solve-tree-name">{f.name}</span>
+                {!f.editable && <IconLock size={11} className="solve-tree-lock" />}
+              </button>
+            ))}
           </div>
-          <textarea
-            className="solve-editor"
-            value={code}
-            onChange={e => onCode(e.target.value)}
-            spellCheck={false}
-            aria-label="Code editor"
-          />
+
+          {/* Editor */}
+          <div className="solve-right">
+            <div className="solve-editor-hdr">
+              <span className="solve-dot r" /><span className="solve-dot y" /><span className="solve-dot g" />
+              <span className="solve-editor-file">
+                {activeFile.name}
+                {!activeFile.editable && <span className="solve-readonly-tag"><IconLock size={10} /> read-only</span>}
+              </span>
+            </div>
+            <textarea
+              className="solve-editor"
+              value={activeContent}
+              onChange={e => onEdit(activeName, e.target.value)}
+              readOnly={!activeFile.editable}
+              spellCheck={false}
+              aria-label={`${activeFile.name} editor`}
+            />
+          </div>
         </div>
       </div>
 
@@ -433,6 +593,12 @@ function SolveView({ c, code, onCode, onBack, onSubmit }) {
       </div>
     </div>
   )
+}
+
+function FileGlyph({ lang }) {
+  const map = { js: { t: 'JS', c: '#f7df1e', f: '#000' }, ts: { t: 'TS', c: '#3178c6', f: '#fff' }, md: { t: 'MD', c: '#6b6b6b', f: '#fff' } }
+  const g = map[lang] ?? map.md
+  return <span className="solve-file-glyph" style={{ background: g.c, color: g.f }}>{g.t}</span>
 }
 
 /* ── Results (funnel + top 10) ── */
@@ -578,7 +744,7 @@ function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
         <h2 className="ba-title">{madeTop10 ? `Top 10 — placed #${rank}!` : 'Verified badge earned!'}</h2>
         <p className="ba-subtitle">
           {madeTop10
-            ? `You're on ${c.company}'s recruiter shortlist for this bounty, with the prize and a warm intro on the way.`
+            ? `You're on ${c.company}'s recruiter shortlist for this bounty, with a warm intro on the way.`
             : `You cleared the objective gate. Your work is verified and you're now visible to ${c.company}'s recruiters.`}
         </p>
 
