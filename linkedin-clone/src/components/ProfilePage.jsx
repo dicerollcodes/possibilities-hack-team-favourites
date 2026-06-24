@@ -562,7 +562,7 @@ function CompanyGlyph({ company }) {
 
 function companyLogoBg(company, fallback) {
   if (company === 'Google') return '#fff'
-  if (company === 'Fidelity') return 'transparent'
+  if (company === 'Fidelity' || company === 'Canva') return 'transparent'
   return fallback
 }
 
@@ -650,8 +650,15 @@ function GoogleLogo() {
 }
 function CanvaLogo() {
   return (
-    <svg width="24" height="24" viewBox="0 0 40 40">
-      <path d="M20 3C10.6 3 3 10.6 3 20s7.6 17 17 17 17-7.6 17-17S29.4 3 20 3zm5.3 24.4c-1.4.9-3 1.4-4.8 1.4-5 0-8.7-3.7-8.7-8.8 0-5.2 3.8-9 9-9 1.6 0 3.1.4 4.3 1.2.3.2.4.5.2.8l-1.3 2c-.2.3-.5.4-.8.2-.7-.4-1.5-.7-2.4-.7-2.8 0-4.8 2.1-4.8 5.4 0 3.2 1.9 5.3 4.7 5.3 1 0 1.9-.3 2.7-.8.3-.2.6-.1.8.2l1.3 2c.2.3.1.6-.2.8z" fill="#fff"/>
+    <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="canva-g2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#00c4cc"/>
+          <stop offset="100%" stopColor="#7c2ae8"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="47" fill="url(#canva-g2)"/>
+      <text x="52" y="72" textAnchor="middle" fontFamily="Georgia,'Times New Roman',serif" fontStyle="italic" fontWeight="700" fontSize="78" fill="#fff">C</text>
     </svg>
   )
 }
