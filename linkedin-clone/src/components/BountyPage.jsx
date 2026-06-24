@@ -695,6 +695,63 @@ function DetailView({ c, onBack, onSolve }) {
 
 /* ── Solve (project submission form) ── */
 /* ── Coding Sandbox ── */
+const DEMO_SOLUTION = {
+  'app.js': `async function analyze() {
+  const raw = document.getElementById('url-input').value.trim()
+  if (!raw) return
+  const url = raw.startsWith('http') ? raw : 'https://' + raw
+
+  const results = document.getElementById('results')
+  results.classList.remove('hidden')
+  results.innerHTML = '<p class="loading">Analyzing — this takes ~5 seconds...</p>'
+
+  try {
+    const [mobileRes, desktopRes] = await Promise.all([
+      fetch(\`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=\${encodeURIComponent(url)}&strategy=mobile\`),
+      fetch(\`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=\${encodeURIComponent(url)}&strategy=desktop\`)
+    ])
+    const [mobile, desktop] = await Promise.all([mobileRes.json(), desktopRes.json()])
+
+    const mScore = Math.round((mobile.lighthouseResult?.categories?.performance?.score ?? 0) * 100)
+    const dScore = Math.round((desktop.lighthouseResult?.categories?.performance?.score ?? 0) * 100)
+    const audits = mobile.lighthouseResult?.audits ?? {}
+
+    const lcp  = audits['largest-contentful-paint']?.displayValue ?? 'N/A'
+    const cls  = audits['cumulative-layout-shift']?.displayValue ?? 'N/A'
+    const tbt  = audits['total-blocking-time']?.displayValue ?? 'N/A'
+
+    const issues = Object.values(audits)
+      .filter(a => a.details?.type === 'opportunity' && a.score != null && a.score < 0.9)
+      .sort((a, b) => (a.score ?? 1) - (b.score ?? 1))
+      .slice(0, 3)
+
+    function scoreClass(s) { return s >= 90 ? 'good' : s >= 50 ? 'ok' : 'poor' }
+
+    results.innerHTML = \`
+      <div class="score-grid">
+        <div class="score-card">
+          <div class="score-num \${scoreClass(mScore)}">\${mScore}</div>
+          <div class="score-lbl">Mobile</div>
+        </div>
+        <div class="score-card">
+          <div class="score-num \${scoreClass(dScore)}">\${dScore}</div>
+          <div class="score-lbl">Desktop</div>
+        </div>
+      </div>
+      <div class="vitals">
+        <div class="vital"><div class="vital-val">\${lcp}</div><div class="vital-lbl">Largest Contentful Paint</div></div>
+        <div class="vital"><div class="vital-val">\${cls}</div><div class="vital-lbl">Layout Shift</div></div>
+        <div class="vital"><div class="vital-val">\${tbt}</div><div class="vital-lbl">Total Blocking Time</div></div>
+      </div>
+      \${issues.length ? \`<div class="issues-title">Top issues to fix</div>\${issues.map(i =>
+        \`<div class="issue">\${i.title}: \${i.displayValue ?? ''}</div>\`).join('')}\` : ''}
+    \`
+  } catch (e) {
+    results.innerHTML = '<p class="loading">Could not fetch — check the URL and try again.</p>'
+  }
+}`,
+}
+
 function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
   const [activeFile, setActiveFile] = useState(files[0].name)
   const [preview, setPreview] = useState(false)
@@ -703,6 +760,11 @@ function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
   const current = files.find(f => f.name === activeFile) ?? files[0]
   const content = fileContents[activeFile] ?? current.content
   const changed = files.some(f => f.editable && (fileContents[f.name] ?? f.content) !== f.content)
+
+  function loadDemo() {
+    Object.entries(DEMO_SOLUTION).forEach(([name, val]) => onEdit(name, val))
+    setActiveFile('app.js')
+  }
 
   function runPreview() {
     const html = fileContents['index.html'] ?? files.find(f => f.name === 'index.html')?.content ?? ''
@@ -729,6 +791,7 @@ function CodingSolveView({ c, files, fileContents, onEdit, onBack, onSubmit }) {
           <span>{c.company} · {c.title}</span>
         </div>
         <div className="cse-topbar-actions">
+          <button className="cse-demo-btn" onClick={loadDemo}>⚡ Load Demo</button>
           <button className="cse-run-btn" onClick={runPreview}>▶ Run Preview</button>
           <button
             className="cse-submit-btn"

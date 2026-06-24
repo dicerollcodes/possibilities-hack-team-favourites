@@ -762,6 +762,8 @@
 .cse-topbar-title { flex: 1; display: flex; align-items: center; gap: 8px; color: #444; font-size: 13px; justify-content: center; }
 .cse-co-dot { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
 .cse-topbar-actions { display: flex; align-items: center; gap: 8px; }
+.cse-demo-btn { padding: 5px 13px; background: #fff4e5; border: 1px solid #f0a940; border-radius: 6px; color: #b45309; font-size: 12.5px; cursor: pointer; font-weight: 600; }
+.cse-demo-btn:hover { background: #ffe8c0; }
 .cse-run-btn { padding: 5px 13px; background: #f0f0f0; border: 1px solid #d0d0d0; border-radius: 6px; color: #1a7f37; font-size: 12.5px; cursor: pointer; font-family: monospace; font-weight: 600; }
 .cse-run-btn:hover { background: #e4e4e4; }
 .cse-submit-btn { padding: 5px 14px; border: none; border-radius: 6px; color: #fff; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
