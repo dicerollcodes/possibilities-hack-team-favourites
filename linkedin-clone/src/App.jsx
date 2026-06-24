@@ -39,7 +39,7 @@ export default function App() {
           </div>
         ) : page === 'bounty' ? (
           <div className="li-bounty-wrap">
-            <BountyPage onEarnBadge={earnBadge} />
+            <BountyPage onEarnBadge={earnBadge} onNavigate={setPage} />
           </div>
         ) : (
           <>

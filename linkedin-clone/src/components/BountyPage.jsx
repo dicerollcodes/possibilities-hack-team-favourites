@@ -455,7 +455,7 @@ function starterFiles(bounty) {
   return null
 }
 
-export default function BountyPage({ onEarnBadge }) {
+export default function BountyPage({ onEarnBadge, onNavigate }) {
   const [step, setStep] = useState('browse')
   const [selected, setSelected] = useState(null)
   const [submissionUrl, setSubmissionUrl] = useState('')
@@ -530,7 +530,7 @@ Return JSON only:
   if (step === 'solve' && isCoding) return <CodingSolveView c={selected} files={starterFiles(selected)} fileContents={fileContents} onEdit={(n,v) => setFileContents(p => ({...p,[n]:v}))} onBack={() => setStep('detail')} onSubmit={submitSolution} />
   if (step === 'solve')   return <SolveView c={selected} url={submissionUrl} desc={submissionDesc} onUrl={setSubmissionUrl} onDesc={setSubmissionDesc} onBack={() => setStep('detail')} onSubmit={submitSolution} />
   if (step === 'results') return <ResultsView c={selected} aiResult={aiResult} onContinue={() => setStep('awarded')} />
-  if (step === 'awarded') return <AwardedView c={selected} aiResult={aiResult} onEarnBadge={onEarnBadge} onBack={resetToBrowse} />
+  if (step === 'awarded') return <AwardedView c={selected} aiResult={aiResult} onEarnBadge={onEarnBadge} onBack={resetToBrowse} onNavigate={onNavigate} />
   return null
 }
 
@@ -1038,7 +1038,7 @@ function ResultsView({ c, aiResult, onContinue }) {
 }
 
 /* ── Awarded ── */
-function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
+function AwardedView({ c, aiResult, onEarnBadge, onBack, onNavigate }) {
   const score = aiResult?.score ?? 88
   const percentile = aiResult?.percentile ?? 'Top 14%'
   const feedback = aiResult?.feedback ?? 'Correct, readable solution that handles the core cases.'
@@ -1100,13 +1100,23 @@ function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
         </div>
 
         <div className="ba-actions">
-          <button
-            className="ba-profile-btn"
-            style={{ background: added ? '#059669' : c.companyColor }}
-            onClick={addToProfile}
-          >
-            {added ? <><IconCheck size={16} strokeWidth={3} /> Added to profile</> : 'Add badge to profile'}
-          </button>
+          {!added ? (
+            <button
+              className="ba-profile-btn"
+              style={{ background: c.companyColor }}
+              onClick={addToProfile}
+            >
+              Add badge to profile
+            </button>
+          ) : (
+            <button
+              className="ba-profile-btn"
+              style={{ background: '#059669' }}
+              onClick={() => onNavigate?.('profile')}
+            >
+              <IconCheck size={16} strokeWidth={3} /> View on my profile
+            </button>
+          )}
           <button className="ba-more-btn" onClick={onBack}>Browse more bounties</button>
         </div>
       </div>
