@@ -1063,7 +1063,6 @@ function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
     <div className="bounty-page">
       <div className="bd-wrap ba-center">
         <div className="ba-confetti">{madeTop10 ? '🏆' : '🎉'}</div>
-        <div className="ba-badge-icon" style={{ background: c.companyColor }}>{c.companyLogo}</div>
 
         <div className="ba-score-row">
           <div className="ba-score-block">
@@ -1094,8 +1093,6 @@ function AwardedView({ c, aiResult, onEarnBadge, onBack }) {
             </div>
           </div>
         </div>
-
-        <div className="ba-claim">"{BADGE_CLAIM}"</div>
 
         <div className="ba-feedback">
           <div className="ba-feedback-label"><IconSparkles size={14} /> AI feedback on your judgment</div>
