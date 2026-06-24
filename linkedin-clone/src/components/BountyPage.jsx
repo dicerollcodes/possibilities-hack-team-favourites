@@ -1175,9 +1175,20 @@ function CanvaLogo() {
 }
 
 function FidelityLogo() {
+  const cx = 50, cy = 50, n = 16, outerR = 43, innerR = 9
+  const pts = Array.from({ length: n * 2 }, (_, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / n
+    const r = i % 2 === 0 ? outerR : innerR
+    return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`
+  }).join(' ')
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
-      <path d="M4 4h16v2.5H9v4h9v2.5H9V20H6V6.5H4V4z"/>
+    <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs><clipPath id="fid-c"><circle cx="50" cy="50" r="47"/></clipPath></defs>
+      <circle cx="50" cy="50" r="47" fill="#538234"/>
+      <g clipPath="url(#fid-c)" fill="#fff">
+        <polygon points={pts}/>
+        <polygon points={`${cx},${cy} ${cx-32},98 ${cx+32},98`}/>
+      </g>
     </svg>
   )
 }
@@ -1199,7 +1210,9 @@ function VercelLogo() {
 }
 
 function logoBg(company, color) {
-  return company === 'Google' ? '#fff' : color
+  if (company === 'Google') return '#fff'
+  if (company === 'Fidelity') return 'transparent'
+  return color
 }
 
 function logoFor(company) {
