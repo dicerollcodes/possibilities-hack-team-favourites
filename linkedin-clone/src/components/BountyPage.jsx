@@ -52,7 +52,7 @@ Respond ONLY with valid JSON:
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
         body: JSON.stringify({
-          model: 'qwen/qwen3-next-80b-a3b-instruct',
+          model: 'meta/llama-3.3-70b-instruct',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.6, top_p: 0.7, max_tokens: 512, stream: false,
         }),
@@ -513,7 +513,7 @@ Respond ONLY with valid JSON:
             const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-              body: JSON.stringify({ model: 'qwen/qwen3-next-80b-a3b-instruct', messages: [{ role: 'user', content: prompt }], temperature: 0.6, top_p: 0.7, max_tokens: 512, stream: false }),
+              body: JSON.stringify({ model: 'meta/llama-3.3-70b-instruct', messages: [{ role: 'user', content: prompt }], temperature: 0.6, top_p: 0.7, max_tokens: 512, stream: false }),
             })
             if (!res.ok) continue
             const data = await res.json()
@@ -978,33 +978,14 @@ function SolveView({ c, url, desc, onUrl, onDesc, onBack, onSubmit }) {
   )
 }
 
-/* ── Results (funnel + top 10) ── */
+/* ── Results ── */
 function ResultsView({ c, aiResult, onContinue }) {
-  const stages = funnelStages(c.submissions_count, c.submission_cap)
-  const reduced = prefersReducedMotion()
-  // How many stages are revealed; the AI stage (index 3) waits for the live call.
-  const [revealed, setRevealed] = useState(reduced ? 3 : 0)
-  const aiStageIndex = stages.findIndex(s => s.ai)
-
-  // Reveal mechanical stages one at a time, pausing before the AI stage.
+  const [dots, setDots] = useState('.')
   useEffect(() => {
-    if (reduced) return
-    if (revealed >= aiStageIndex) return
-    const t = setTimeout(() => setRevealed(r => r + 1), 720)
-    return () => clearTimeout(t)
-  }, [revealed, aiStageIndex, reduced])
-
-  // Once the live AI call resolves, reveal the AI stage and the shortlist.
-  useEffect(() => {
-    if (aiResult && revealed < stages.length) {
-      const t = setTimeout(() => setRevealed(stages.length), reduced ? 0 : 500)
-      return () => clearTimeout(t)
-    }
-  }, [aiResult, revealed, stages.length, reduced])
-
-  const userScore = aiResult?.score ?? 0
-  const maxCount = stages[0].count
-  const funnelDone = revealed >= stages.length && aiResult
+    if (aiResult) return
+    const t = setInterval(() => setDots(d => d.length >= 3 ? '.' : d + '.'), 500)
+    return () => clearInterval(t)
+  }, [aiResult])
 
   function scoreColor(s) {
     if (s >= 80) return '#059669'
@@ -1017,6 +998,7 @@ function ResultsView({ c, aiResult, onContinue }) {
     if (s >= 55) return 'Good'
     return 'Needs work'
   }
+  const s = aiResult?.score ?? 0
 
   return (
     <div className="bounty-page">
@@ -1024,49 +1006,25 @@ function ResultsView({ c, aiResult, onContinue }) {
         <div className="rs-hdr">
           <span className="rs-co" style={{ background: c.companyColor }}>{c.companyLogo}</span>
           <div>
-            <div className="rs-title">Your {c.company} submission</div>
-            <div className="rs-sub">Running through {c.submissions_count ?? 100} submissions — only what clears the quality gate reaches AI review.</div>
+            <div className="rs-title">{c.company} · {c.title}</div>
+            <div className="rs-sub">
+              Your submission is being reviewed by an AI judge trained on what {c.company} engineers look for — correctness, clarity, and whether it actually solves the brief.
+            </div>
           </div>
         </div>
 
-        <div className="rs-funnel">
-          {stages.map((s, i) => {
-            const shown = i < revealed
-            const isAiPending = s.ai && !aiResult
-            const prevCount = i === 0 ? s.count : stages[i - 1].count
-            return (
-              <div key={s.key} className={`rs-stage${shown ? ' shown' : ''}${isAiPending && i === revealed ? ' pending' : ''}`}>
-                <div className="rs-stage-top">
-                  <span className="rs-stage-lbl">
-                    {s.ai && <IconSparkles size={13} style={{ marginRight: 4, verticalAlign: -2 }} />}
-                    {isAiPending && i === revealed ? `Scoring submissions…` : s.label}
-                  </span>
-                  <span className="rs-stage-num">
-                    {shown
-                      ? <CountNumber from={prevCount} to={s.count} reduced={reduced} />
-                      : (isAiPending && i === revealed ? <span className="rs-shimmer-num">···</span> : '')}
-                  </span>
-                </div>
-                <div className="rs-bar-track">
-                  <div
-                    className="rs-bar-fill"
-                    style={{
-                      width: shown ? `${barWidth(s.count, maxCount)}%` : '0%',
-                      background: s.ai ? c.companyColor : '#0a66c2',
-                    }}
-                  />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {funnelDone && (
+        {!aiResult ? (
+          <div className="rs-loading">
+            <div className="rs-spinner" style={{ borderTopColor: c.companyColor }} />
+            <div className="rs-loading-text">Reviewing your submission{dots}</div>
+            <div className="rs-loading-hint">This usually takes 5–15 seconds</div>
+          </div>
+        ) : (
           <div className="rs-score-card">
             <div className="rs-score-row">
               <div className="rs-score-main">
-                <div className="rs-score-num" style={{ color: scoreColor(userScore) }}>{userScore}</div>
-                <div className="rs-score-label" style={{ color: scoreColor(userScore) }}>{scoreLabel(userScore)}</div>
+                <div className="rs-score-num" style={{ color: scoreColor(s) }}>{s}</div>
+                <div className="rs-score-label" style={{ color: scoreColor(s) }}>{scoreLabel(s)}</div>
               </div>
               <div className="rs-score-divider" />
               <div className="rs-percentile-block">

@@ -918,19 +918,13 @@
 .rs-co { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .rs-title { font-size: 19px; font-weight: 800; color: #000; }
 .rs-sub { font-size: 12.5px; color: #6b6b6b; margin-top: 3px; line-height: 1.45; }
-.rs-funnel { display: flex; flex-direction: column; gap: 16px; }
-.rs-stage { opacity: 0; transform: translateY(6px); transition: opacity .4s ease, transform .4s ease; }
-.rs-stage.shown, .rs-stage.pending { opacity: 1; transform: none; }
-.rs-stage-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
-.rs-stage-lbl { font-size: 13px; font-weight: 600; color: #333; }
-.rs-stage-num { font-size: 18px; font-weight: 900; color: #000; font-variant-numeric: tabular-nums; }
-.rs-stage.pending .rs-stage-lbl { color: #0077b6; }
-.rs-shimmer-num { color: #0077b6; letter-spacing: 2px; animation: rs-pulse 1s ease-in-out infinite; }
-@keyframes rs-pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
-.rs-bar-track { height: 10px; background: rgba(0,0,0,0.06); border-radius: 5px; overflow: hidden; }
-.rs-bar-fill { height: 100%; border-radius: 5px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.rs-loading { display: flex; flex-direction: column; align-items: center; padding: 48px 0 32px; gap: 14px; }
+.rs-spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: #0a66c2; border-radius: 50%; animation: rs-spin 0.8s linear infinite; }
+@keyframes rs-spin { to { transform: rotate(360deg); } }
+.rs-loading-text { font-size: 15px; font-weight: 600; color: #333; }
+.rs-loading-hint { font-size: 12.5px; color: #999; }
 
-.rs-score-card { margin-top: 26px; padding-top: 22px; border-top: 1px solid #e8e8e8; }
+.rs-score-card { margin-top: 4px; }
 .rs-score-row { display: flex; align-items: center; gap: 0; margin-bottom: 20px; }
 .rs-score-main { flex: 1; text-align: center; }
 .rs-score-num { font-size: 64px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -969,9 +963,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rs-stage { transition: none; }
-  .rs-bar-fill { transition: none; }
-  .rs-shimmer-num { animation: none; }
+  .rs-spinner { animation: none; }
 }
 
 /* ─────────────────────────────────────────
